@@ -14,18 +14,14 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FastAPI Application with PostgreSQL")
 
+from .api import thesis_defense
+from .api import professor # New import
 
-# Dependency function to get a database session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+app.include_router(thesis_defense.router, prefix="/api/v1", tags=["thesis-defenses"])
+app.include_router(professor.router, prefix="/api/v1", tags=["professors"]) # New router inclusion
+
 
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI application!"}
-
-# We will add more endpoints that interact with the database in the next steps.
