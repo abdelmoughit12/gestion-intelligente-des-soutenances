@@ -99,3 +99,41 @@ export const updateDefenseStatus = async (id: number, status: 'accepted' | 'decl
   }
 };
 
+// Define an interface for Professor data
+export interface Professor {
+  id: number;
+  first_name: string;
+  last_name: string;
+  // Add other fields if needed, e.g., specialty, user_id
+}
+
+export const getProfessors = async (): Promise<Professor[]> => {
+  try {
+    const response = await api.get('/api/professors/');
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch professors');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
+
+export interface UpdateDefensePayload {
+  status?: 'accepted' | 'declined' | 'pending';
+  defense_date?: string;
+  defense_time?: string;
+  jury_member_ids?: number[];
+}
+
+export const updateDefenseDetails = async (id: number, payload: UpdateDefensePayload) => {
+  try {
+    const response = await api.patch(`/api/defenses/${id}/`, payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to update defense details');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};

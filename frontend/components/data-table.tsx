@@ -53,6 +53,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ScheduleDefenseSheet } from "@/components/schedule-defense-sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { updateDefenseStatus } from "@/services/api"
 
 export const studentUserSchema = z.object({
@@ -161,39 +170,57 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
       const { onUpdate } = table.options.meta as { onUpdate: () => void };
       const defense = row.original;
 
-      const handleStatusUpdate = async (status: 'accepted' | 'declined') => {
+      // Handle Decline request directly
+      const handleDeclineRequest = async () => {
         try {
-          await updateDefenseStatus(defense.id, status);
-          toast.success(`Request has been ${status}.`);
+          await updateDefenseStatus(defense.id, 'declined');
+          toast.success(`Request for ${defense.title} has been declined.`);
           if (onUpdate) {
             onUpdate();
           }
         } catch (error) {
-          toast.error("Failed to update status.");
+          toast.error("Failed to decline request.");
         }
       };
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-              size="icon"
-            >
-              <MoreVerticalIcon />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => handleStatusUpdate('accepted')}>
-              Accept request
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleStatusUpdate('declined')}>
-              Decline request
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Sheet> {/* Outer Sheet for the ScheduleDefenseSheet */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+                size="icon"
+              >
+                <MoreVerticalIcon />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {/* This DropdownMenuItem now triggers the Sheet */}
+              <SheetTrigger asChild>
+                <DropdownMenuItem>
+                  Schedule Defense
+                </DropdownMenuItem>
+              </SheetTrigger>
+              {/* Decline request remains a direct action */}
+              <DropdownMenuItem onClick={handleDeclineRequest}>
+                Decline request
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Schedule Defense for "{defense.title}"</SheetTitle>
+              <SheetDescription>
+                Assign defense date, time, and jury members.
+              </SheetDescription>
+            </SheetHeader>
+            {/* The actual form component */}
+            <ScheduleDefenseSheet defense={defense} onDefenseScheduled={onUpdate} />
+          </SheetContent>
+        </Sheet>
       );
     },
   },
