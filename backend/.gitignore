@@ -7,7 +7,8 @@ __pycache__/
 venv/
 env/
 ENV/
-*.env  # si tu mets ton DATABASE_URL ici
+.env
+!.env.example
 
 # ===== Pytest / coverage =====
 htmlcov/
@@ -39,3 +40,7 @@ ehthumbs.db
 
 # ===== Uvicorn / FastAPI =====
 *.pid
+
+# ===== Uploads =====
+uploads/
+*.pdf

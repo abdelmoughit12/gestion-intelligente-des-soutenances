@@ -24,6 +24,35 @@ class CRUDThesisDefense:
             .all()
         )
 
+    def get_by_student(self, db: Session, student_id: int, skip: int = 0, limit: int = 100) -> List[models.ThesisDefense]:
+        """Get all thesis defenses for a specific student"""
+        return (
+            db.query(self.model)
+            .options(
+                joinedload(self.model.student).joinedload(models.Student.user),
+                joinedload(self.model.report),
+            )
+            .filter(self.model.student_id == student_id)
+            .order_by(self.model.id.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    def create(self, db: Session, *, obj_in: schemas.ThesisDefenseCreate) -> models.ThesisDefense:
+        """Create a new thesis defense"""
+        db_obj = self.model(
+            title=obj_in.title,
+            description=obj_in.description,
+            status=obj_in.status,
+            student_id=obj_in.student_id,
+            report_id=obj_in.report_id
+        )
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
     def update(
         self,
         db: Session,
