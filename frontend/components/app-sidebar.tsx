@@ -14,6 +14,7 @@ import {
   FileTextIcon,
   FolderIcon,
   HelpCircleIcon,
+  HomeIcon, // Import HomeIcon
   LayoutDashboardIcon,
   ListIcon,
   SearchIcon,
@@ -23,7 +24,7 @@ import {
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavUser }  from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +42,11 @@ const data = {
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: HomeIcon,
+    },
     {
       title: "Les Demandes",
       url: "/dashboard/requests",

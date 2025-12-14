@@ -26,10 +26,11 @@ app.add_middleware(
 
 from .api import thesis_defense
 from .api import professor # New import
+from .api import stats # New import for stats
 
 app.include_router(thesis_defense.router, prefix="/api", tags=["thesis-defenses"])
 app.include_router(professor.router, prefix="/api", tags=["professors"]) # New router inclusion
-
+app.include_router(stats.router, prefix="/api", tags=["statistics"]) # New router inclusion for stats
 
 
 @app.get("/")

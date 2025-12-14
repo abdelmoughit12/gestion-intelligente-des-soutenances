@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DefensesDataTable } from "@/components/defenses-data-table";
 import { z } from "zod";
 import { schema } from "@/components/defenses-data-table";
+import { getDefenses } from "@/services/api"; // Import the new API function
 
 export default function Page() {
   const [data, setData] = useState<z.infer<typeof schema>[]>([]);
@@ -13,11 +14,7 @@ export default function Page() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/defenses/");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const jsonData = await response.json();
+        const jsonData = await getDefenses(); // Use the API function
         setData(jsonData);
       } catch (e: any) {
         setError(e.message);

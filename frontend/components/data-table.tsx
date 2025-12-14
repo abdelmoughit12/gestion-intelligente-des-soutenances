@@ -17,43 +17,26 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import {
-  CheckCircle2Icon,
-  CheckCircleIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
   ColumnsIcon,
-  GripVerticalIcon,
-  LoaderIcon,
   MoreVerticalIcon,
-  PlusIcon,
-  TrendingUpIcon,
 } from "lucide-react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { useIsMobile } from "@/hooks/use-mobile"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -62,17 +45,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import {
   Table,
   TableBody,
@@ -81,12 +53,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { updateDefenseStatus } from "@/services/api"
 
 export const studentUserSchema = z.object({
   email: z.string(),
@@ -123,8 +90,7 @@ export const schema = z.object({
   defense_time: z.string().nullable(),
   student: studentSchema,
   report: reportSchema,
-  // jury_members: z.array(z.any()),
-})
+});
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
@@ -158,8 +124,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     header: "ID",
   },
   {
-    accessorKey: "student.user.first_name", // This will be the accessor for student's first name
-    header: "Student Name", // Combined header for student's name
+    accessorKey: "student.user.first_name",
+    header: "Student Name",
     cell: ({ row }) => {
       const student = row.original.student;
       return `${student.user.first_name} ${student.user.last_name}`;
@@ -186,50 +152,77 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     header: "Defense Time",
   },
   {
-    accessorKey: "report.file_name", // This will be the accessor for report file name
+    accessorKey: "report.file_name",
     header: "Report",
   },
   {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-            size="icon"
-          >
-            <MoreVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem>Accept request</DropdownMenuItem>
-          <DropdownMenuItem>Decline request</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row, table }) => {
+      const { onUpdate } = table.options.meta as { onUpdate: () => void };
+      const defense = row.original;
+
+      const handleStatusUpdate = async (status: 'accepted' | 'declined') => {
+        try {
+          await updateDefenseStatus(defense.id, status);
+          toast.success(`Request has been ${status}.`);
+          if (onUpdate) {
+            onUpdate();
+          }
+        } catch (error) {
+          toast.error("Failed to update status.");
+        }
+      };
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+              size="icon"
+            >
+              <MoreVerticalIcon />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handleStatusUpdate('accepted')}>
+              Accept request
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleStatusUpdate('declined')}>
+              Decline request
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   },
-]
+];
 
 export function DataTable({
   data: initialData,
+  onUpdate,
 }: {
-  data: z.infer<typeof schema>[]
+  data: z.infer<typeof schema>[];
+  onUpdate: () => void;
 }) {
-  const [data, setData] = React.useState(() => initialData)
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [data, setData] = React.useState(() => initialData);
+  const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
-  )
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  );
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
-  })
+  });
   
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
   const table = useReactTable({
     data,
     columns,
@@ -239,6 +232,9 @@ export function DataTable({
       rowSelection,
       columnFilters,
       pagination,
+    },
+    meta: {
+      onUpdate,
     },
     getRowId: (row) => row.id.toString(),
     enableRowSelection: true,
@@ -253,14 +249,13 @@ export function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-  })
+  });
 
   return (
     <div
       className="flex w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -291,7 +286,7 @@ export function DataTable({
                     >
                       {column.id}
                     </DropdownMenuCheckboxItem>
-                  )
+                  );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -315,7 +310,7 @@ export function DataTable({
                                 header.getContext()
                               )}
                         </TableHead>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
@@ -428,6 +423,3 @@ export function DataTable({
     </div>
   )
 }
-
-
-

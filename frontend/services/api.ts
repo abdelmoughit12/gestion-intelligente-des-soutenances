@@ -47,15 +47,55 @@ export const getStudentRequests = async () => {
   }
 }
 
-export const getDashboardData = async () => {
+// Define the new interface for the stats data
+export interface StatsData {
+  total_thesis_defenses: number;
+  total_students: number;
+  total_professors: number;
+  thesis_defenses_by_status: {
+    declined?: number;
+    accepted?: number;
+    pending?: number;
+  };
+  monthly_thesis_defenses: {
+    month: string;
+    count: number;
+  }[];
+}
+
+export const getDashboardData = async (): Promise<StatsData> => {
   try {
-    const response = await api.get('/api/students/dashboard')
+    const response = await api.get('/api/stats/'); // Change endpoint
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch dashboard data');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+}
+
+export const getDefenses = async () => {
+  try {
+    const response = await api.get('/api/defenses/')
     return response.data
   } catch (error: any) {
     if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch dashboard data')
+      throw new Error(error.response.data.detail || 'Failed to fetch defenses')
     }
     throw new Error('Network error. Please check your connection.')
   }
 }
+
+export const updateDefenseStatus = async (id: number, status: 'accepted' | 'declined') => {
+  try {
+    const response = await api.patch(`/api/defenses/${id}/`, { status });
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to update defense status');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
 

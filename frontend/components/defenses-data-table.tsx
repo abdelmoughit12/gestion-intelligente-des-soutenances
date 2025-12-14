@@ -214,29 +214,67 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
               </SheetTrigger>
             </DropdownMenuContent>
           </DropdownMenu>
-          <SheetContent>
+          <SheetContent className="sm:max-w-lg">
             <SheetHeader>
-              <SheetTitle>Defense Details</SheetTitle>
+              <SheetTitle>{defense.title}</SheetTitle>
+              <SheetDescription>
+                Defense details for the thesis by {`${defense.student.user.first_name} ${defense.student.user.last_name}`}.
+              </SheetDescription>
             </SheetHeader>
-            <div className="py-4">
-              <h3 className="font-semibold">Title</h3>
-              <p>{defense.title}</p>
-              <h3 className="mt-4 font-semibold">Student</h3>
-              <p>{`${defense.student.user.first_name} ${defense.student.user.last_name}`}</p>
-              <h3 className="mt-4 font-semibold">Status</h3>
-              <p>{defense.status}</p>
-              <h3 className="mt-4 font-semibold">Defense Date & Time</h3>
-              <p>{`${defense.defense_date} ${defense.defense_time}`}</p>
-              <h3 className="mt-4 font-semibold">Report</h3>
-              <p>File: {defense.report.file_name}</p>
-              <p>AI Summary: {defense.report.ai_summary}</p>
-              <p>AI Domain: {defense.report.ai_domain}</p>
-              <p>Similarity Score: {defense.report.ai_similarity_score}</p>
-              <h3 className="mt-4 font-semibold">Jury</h3>
-              <ul>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 items-center gap-4">
+                <Label>Status</Label>
+                <Badge>{defense.status}</Badge>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                <Label>Defense Date</Label>
+                <span>{`${defense.defense_date} ${defense.defense_time}`}</span>
+              </div>
+              
+              <Separator className="my-4" />
+
+              <h4 className="text-lg font-semibold">Student Details</h4>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>Name</Label>
+                  <span>{`${defense.student.user.first_name} ${defense.student.user.last_name}`}</span>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>Email</Label>
+                  <span>{defense.student.user.email}</span>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>Major</Label>
+                  <span>{defense.student.major}</span>
+              </div>
+
+              <Separator className="my-4" />
+              
+              <h4 className="text-lg font-semibold">Report Analysis</h4>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>File</Label>
+                  <span>{defense.report.file_name}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                  <Label>AI Summary</Label>
+                  <p className="text-sm text-muted-foreground">{defense.report.ai_summary}</p>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>AI Domain</Label>
+                  <span>{defense.report.ai_domain}</span>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                  <Label>Similarity Score</Label>
+                  <span>{defense.report.ai_similarity_score}</span>
+              </div>
+
+              <Separator className="my-4" />
+
+              <h4 className="text-lg font-semibold">Jury Members</h4>
+              <ul className="grid gap-3">
                 {defense.jury_members.map((member) => (
-                  <li key={member.professor_id}>
-                    {`${member.professor.user.first_name} ${member.professor.user.last_name} (${member.role})`}
+                  <li key={member.professor_id} className="flex items-center justify-between">
+                    <span className="font-medium">{`${member.professor.user.first_name} ${member.professor.user.last_name}`}</span>
+                    <span className="text-muted-foreground">{member.role}</span>
                   </li>
                 ))}
               </ul>
