@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from .professor import Professor
-from .thesis_defense import ThesisDefense # For nesting, if needed
 
 from app.models.jury_member import JuryRole # Use the enum from models
 

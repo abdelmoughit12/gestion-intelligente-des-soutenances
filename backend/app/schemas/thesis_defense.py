@@ -1,7 +1,9 @@
 from pydantic import BaseModel
 from datetime import date, time
+from typing import List
 from .student import Student
 from .report import Report
+from .jury_member import JuryMember
 
 # Shared properties
 class ThesisDefenseBase(BaseModel):
@@ -32,6 +34,7 @@ class ThesisDefense(ThesisDefenseBase):
     # To show nested information in the response
     student: Student
     report: Report | None = None
+    jury_members: List[JuryMember] = []
 
     class Config:
         from_attributes = True

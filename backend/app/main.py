@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import Base, engine, and SessionLocal from the database session module
 from .db.session import Base, engine, SessionLocal
@@ -14,11 +15,20 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FastAPI Application with PostgreSQL")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 from .api import thesis_defense
 from .api import professor # New import
 
-app.include_router(thesis_defense.router, prefix="/api/v1", tags=["thesis-defenses"])
-app.include_router(professor.router, prefix="/api/v1", tags=["professors"]) # New router inclusion
+app.include_router(thesis_defense.router, prefix="/api", tags=["thesis-defenses"])
+app.include_router(professor.router, prefix="/api", tags=["professors"]) # New router inclusion
 
 
 
