@@ -1,0 +1,224 @@
+{
+  "info": {
+    "name": "Ai_Soutenance API - Professor Dashboard",
+    "description": "Collection de test pour tous les endpoints du dashboard professeur",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1️⃣ GET /assigned-soutenances",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/assigned-soutenances",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "assigned-soutenances"
+          ]
+        },
+        "description": "Récupère toutes les soutenances assignées au professeur connecté (liste avec JOIN 4 tables)"
+      },
+      "response": []
+    },
+    {
+      "name": "2️⃣ GET /soutenances/{id} - Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/soutenances/1",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "soutenances",
+            "1"
+          ]
+        },
+        "description": "Récupère les détails d'une soutenance spécifique (avec vérification d'accès)"
+      },
+      "response": []
+    },
+    {
+      "name": "3️⃣ GET /soutenances/{id}/report/download - PDF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/soutenances/1/report/download",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "soutenances",
+            "1",
+            "report",
+            "download"
+          ]
+        },
+        "description": "Télécharge le rapport PDF. Dans Postman: cliquez 'Send and Download' pour sauvegarder le fichier."
+      },
+      "response": []
+    },
+    {
+      "name": "4️⃣ POST /soutenances/{id}/evaluation - Submit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"score\": 18.5,\n  \"comments\": \"Très bonne soutenance avec une excellente présentation et réponses pertinentes aux questions.\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/soutenances/1/evaluation",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "soutenances",
+            "1",
+            "evaluation"
+          ]
+        },
+        "description": "Soumettre une évaluation pour une soutenance (INSERT ou UPDATE si existe déjà)"
+      },
+      "response": []
+    },
+    {
+      "name": "5️⃣ GET /notifications",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/notifications",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "notifications"
+          ]
+        },
+        "description": "Récupère toutes les notifications du professeur (triées par date DESC)"
+      },
+      "response": []
+    },
+    {
+      "name": "6️⃣ PATCH /notifications/{id}/read",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-Professor-Id",
+            "value": "1",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/professors/notifications/1/read",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "professors",
+            "notifications",
+            "1",
+            "read"
+          ]
+        },
+        "description": "Marque une notification comme lue (modification partielle)"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api/professors",
+      "type": "string"
+    },
+    {
+      "key": "professor_id",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
