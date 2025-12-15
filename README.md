@@ -24,9 +24,7 @@ A smart thesis defense (soutenance) management platform built with FastAPI and N
 
 Before you begin, ensure you have installed:
 
-- [Python 3.11+](https://www.python.org/downloads/)
-- [Node.js 18+](https://nodejs.org/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for PostgreSQL)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Git](https://git-scm.com/)
 
 ---
@@ -40,61 +38,55 @@ git clone https://github.com/IBIZZI-Khalid/soutenance-manager.git
 cd soutenance-manager
 ```
 
-### 2️⃣ Start PostgreSQL Database
+### 2️⃣ Start the App
+
+This project supports two ways to run locally.
+
+#### Option A (Recommended): Run Everything with Docker
 
 ```bash
-# Start PostgreSQL using Docker Compose
-docker-compose up -d
+# Build + start PostgreSQL + Backend + Frontend
+docker compose up --build
 
-# Verify it's running
-docker ps
+# Or run in background
+# docker compose up -d --build
 ```
 
-### 3️⃣ Setup Backend (FastAPI)
+Windows shortcut:
 
 ```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Create .env file from example
-copy .env.example .env  # Windows
-# cp .env.example .env  # Mac/Linux
-
-# Create test student data
-python scripts/create_test_data.py
-
-# Start backend server
-uvicorn app.main:app --reload
-# Or use: start_server.bat (Windows)
+start.bat
 ```
 
-Backend will run at: **http://localhost:8000**
-API Documentation: **http://localhost:8000/docs**
+- Frontend: **http://localhost:3000**
+- Backend API: **http://localhost:8000**
+- Swagger docs: **http://localhost:8000/docs**
 
-### 4️⃣ Setup Frontend (Next.js)
+#### Option B (Manual Dev): Frontend Local, DB+Backend in Docker
+
+1) Start only Postgres + Backend via Docker:
 
 ```bash
-cd ../frontend
+docker compose up -d --build postgres backend
+```
 
-# Install dependencies
+2) Start the frontend locally:
+
+```bash
+cd frontend
 npm install
-
-# Start development server
 npm run dev
 ```
 
-Frontend will run at: **http://localhost:3000**
+Frontend will run at **http://localhost:3000** and call the backend at **http://localhost:8000**.
+
+### 3️⃣ (Optional) Seed Test Data
+
+```bash
+docker compose exec backend python scripts/create_test_data.py
+```
+
+If you want to override the default Postgres credentials without editing Compose, copy `.env.example` to `.env` at the repo root.
 
 ---
 
@@ -132,13 +124,15 @@ soutenance-manager/
 
 ### Backend Environment Variables
 
-Edit `backend/.env`:
+If you run the backend outside Docker, edit `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql://postgres:admin1234@localhost:5432/Ai_Soutenance
 API_HOST=0.0.0.0
 API_PORT=8000
 ```
+
+When using Docker Compose, `DATABASE_URL` is injected automatically and should use the service name `postgres`.
 
 ### Frontend Environment Variables
 
@@ -183,18 +177,66 @@ Visit **http://localhost:8000/docs** for interactive API documentation (Swagger 
 ## 🐳 Docker Commands
 
 ```bash
-# Start PostgreSQL
-docker-compose up -d
+# Start everything
+docker compose up --build
 
-# Stop PostgreSQL
-docker-compose down
+# Start in background
+docker compose up -d --build
+
+# Stop everything
+docker compose down
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Reset database (⚠️ deletes all data)
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d --build
+```
+
+## 🧯 Docker Troubleshooting
+
+If you get a container name conflict (example: `postgres-soutenance is already in use`), it usually means you previously started a container manually.
+
+```bash
+docker rm -f postgres-soutenance
+docker compose up -d --build
+```
+
+If you get a port conflict on `5432`, stop/remove the other Postgres container using that port, then rerun Compose.
+
+---
+
+## 👥 Team Workflow (Dev Branch)
+
+Teammates should work from `dev` and run the app with Docker.
+
+1) Pull latest `dev`:
+
+```bash
+git checkout dev
+git pull
+```
+
+2) Run the stack:
+
+```bash
+docker compose up -d --build
+```
+
+3) (Optional) Seed test data:
+
+```bash
+docker compose exec backend python scripts/create_test_data.py
+```
+
+4) Create a feature branch, push, and open a PR into `dev`:
+
+```bash
+git checkout -b feature/<your-feature>
+git add .
+git commit -m "Your message"
+git push -u origin feature/<your-feature>
 ```
 
 ---

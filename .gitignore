@@ -1,0 +1,20 @@
+# Local environments (do not commit)
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Local test artifacts
+*.pdf
+
+# Node
+node_modules/
+.next/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
