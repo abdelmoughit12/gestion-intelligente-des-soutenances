@@ -9,6 +9,13 @@ const api = axios.create({
   },
 })
 
+const toFileUrl = (maybePath?: string | null) => {
+  if (!maybePath) return ''
+  if (maybePath.startsWith('http://') || maybePath.startsWith('https://')) return maybePath
+  const normalized = maybePath.replace(/^\/+/, '')
+  return `${API_BASE_URL}/${normalized}`
+}
+
 export interface SubmitRequestResponse {
   id: string
   pdfUrl: string
@@ -30,7 +37,7 @@ export const submitSoutenanceRequest = async (
     // Transform backend response to match frontend expectations
     return {
       id: response.data.id.toString(),
-      pdfUrl: response.data.report?.file_name || '',
+      pdfUrl: toFileUrl(response.data.report?.file_name),
       summary: response.data.report?.ai_summary,
       similarityScore: response.data.report?.ai_similarity_score,
       domain: response.data.report?.ai_domain,
@@ -56,7 +63,7 @@ export const getStudentRequests = async () => {
       title: defense.title,
       domain: defense.report?.ai_domain || 'Unknown',
       status: defense.status,
-      pdfUrl: defense.report?.file_name,
+      pdfUrl: toFileUrl(defense.report?.file_name),
       summary: defense.report?.ai_summary,
       similarityScore: defense.report?.ai_similarity_score,
       createdAt: defense.report?.submission_date || new Date().toISOString(),

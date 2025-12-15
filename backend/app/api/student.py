@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from pathlib import Path
 import os
+from uuid import uuid4
 
 from .. import schemas, models
 from .. import crud
@@ -14,6 +15,21 @@ router = APIRouter()
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10MB
+ALLOWED_PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf", "application/acrobat", "applications/vnd.pdf"}
+
+
+def _sanitize_filename(filename: str) -> str:
+    # Prevent path traversal and remove problematic characters
+    name = Path(filename).name
+    name = name.replace(" ", "_")
+    keep = []
+    for ch in name:
+        if ch.isalnum() or ch in {"_", "-", "."}:
+            keep.append(ch)
+    sanitized = "".join(keep)
+    return sanitized or "upload.pdf"
 
 
 @router.post("/students/soutenance-requests", response_model=schemas.ThesisDefense)
@@ -30,21 +46,49 @@ async def create_soutenance_request(
     Uploads PDF report, creates report entry, and creates thesis defense entry.
     """
     # Validate PDF file
-    if not pdf.filename.endswith('.pdf'):
+    if not pdf.filename or not pdf.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
-    # Save PDF file to disk
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    safe_filename = f"{timestamp}_{pdf.filename}"
-    file_path = os.path.join("uploads", safe_filename)
-    
+    if pdf.content_type and pdf.content_type not in ALLOWED_PDF_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid PDF content type")
+
+    # Save PDF file to disk (chunked, size-limited)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_name = _sanitize_filename(pdf.filename)
+    unique_prefix = uuid4().hex
+    safe_filename = f"{timestamp}_{unique_prefix}_{original_name}"
+    rel_path = str(Path("uploads") / safe_filename).replace("\\", "/")
+    abs_path = UPLOAD_DIR / safe_filename
+
+    bytes_written = 0
     try:
-        # Write file to disk
-        with open(file_path, "wb") as buffer:
-            content = await pdf.read()
-            buffer.write(content)
+        with open(abs_path, "wb") as buffer:
+            while True:
+                chunk = await pdf.read(1024 * 1024)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > MAX_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="PDF file too large (max 10MB)")
+                buffer.write(chunk)
+    except HTTPException:
+        if abs_path.exists():
+            try:
+                abs_path.unlink()
+            except OSError:
+                pass
+        raise
     except Exception as e:
+        if abs_path.exists():
+            try:
+                abs_path.unlink()
+            except OSError:
+                pass
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    finally:
+        try:
+            await pdf.close()
+        except Exception:
+            pass
     
     # TODO: Implement AI analysis for summary, domain detection, and similarity score
     # This would call your AI service here
@@ -52,9 +96,9 @@ async def create_soutenance_request(
     ai_domain = domain  # For now, use the domain provided by student
     ai_similarity_score = None  # Will be calculated by AI
     
-    # Create Report entry with the saved file path
+    # Create Report entry with the saved relative path
     report_data = schemas.ReportCreate(
-        file_name=file_path,  # Store the full path to the saved file
+        file_name=rel_path,
         ai_summary=ai_summary,
         ai_domain=ai_domain,
         ai_similarity_score=ai_similarity_score,
@@ -89,7 +133,7 @@ def get_student_requests(
     return defenses
 
 
-@router.get("/students/dashboard")
+@router.get("/students/dashboard", response_model=schemas.StudentDashboardStats)
 def get_student_dashboard(
     db: Session = Depends(get_db),
     student_id: int = 1,  # TODO: Get from authenticated user session
@@ -99,15 +143,23 @@ def get_student_dashboard(
     Returns count of pending, accepted, and refused requests.
     """
     defenses = crud.thesis_defense.get_by_student(db=db, student_id=student_id)
-    
-    stats = {
-        "total": len(defenses),
-        "pending": sum(1 for d in defenses if d.status == "pending"),
-        "accepted": sum(1 for d in defenses if d.status == "accepted"),
-        "refused": sum(1 for d in defenses if d.status == "refused"),
-    }
-    
-    return stats
+
+    today = date.today()
+    upcoming_cutoff = today + timedelta(days=7)
+    upcoming = [
+        d
+        for d in defenses
+        if d.defense_date is not None and today <= d.defense_date <= upcoming_cutoff
+    ]
+
+    return schemas.StudentDashboardStats(
+        total=len(defenses),
+        pending=sum(1 for d in defenses if d.status == "pending"),
+        accepted=sum(1 for d in defenses if d.status == "accepted"),
+        refused=sum(1 for d in defenses if d.status == "refused"),
+        recent_requests=defenses[:5],
+        upcoming_defenses=upcoming,
+    )
 
 
 @router.get("/students/requests/{defense_id}", response_model=schemas.ThesisDefense)

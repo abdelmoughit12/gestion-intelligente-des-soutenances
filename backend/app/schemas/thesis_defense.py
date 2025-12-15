@@ -1,7 +1,14 @@
-from pydantic import BaseModel
+from __future__ import annotations
+
 from datetime import date, time
-from .student import Student
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel
+
 from .report import Report
+
+if TYPE_CHECKING:
+    from .student import Student
 
 # Shared properties
 class ThesisDefenseBase(BaseModel):
@@ -30,7 +37,7 @@ class ThesisDefense(ThesisDefenseBase):
     defense_time: time | None = None
     
     # To show nested information in the response
-    student: Student
+    student: "Student"
     report: Report | None = None
 
     class Config:
