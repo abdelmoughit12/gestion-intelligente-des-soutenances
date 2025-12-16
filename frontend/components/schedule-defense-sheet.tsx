@@ -94,32 +94,34 @@ export function ScheduleDefenseSheet({
         <Label htmlFor="defense_date" className="text-right">
           Date
         </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !form.watch("defense_date") && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {form.watch("defense_date") ? (
-                format(form.watch("defense_date"), "PPP")
-              ) : (
-                <span>Pick a date</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={form.watch("defense_date")}
-              onSelect={(date) => form.setValue("defense_date", date || undefined)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="col-span-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !form.watch("defense_date") && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {form.watch("defense_date") ? (
+                  format(form.watch("defense_date"), "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={form.watch("defense_date")}
+                onSelect={(date) => form.setValue("defense_date", date || undefined)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="defense_time" className="text-right">
@@ -138,37 +140,39 @@ export function ScheduleDefenseSheet({
         <Label htmlFor="jury_members" className="text-right">
           Jury Members
         </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              Select Professors
-              <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-            <Command>
-              <CommandInput placeholder="Search professors..." />
-              <CommandEmpty>No professor found.</CommandEmpty>
-              <CommandGroup>
-                {professors.map((professor) => (
-                  <CommandItem key={professor.id} onSelect={() => {
-                    const currentSelection = form.getValues("jury_members");
-                    const newSelection = currentSelection.includes(professor.id)
-                      ? currentSelection.filter((id) => id !== professor.id)
-                      : [...currentSelection, professor.id];
-                    form.setValue("jury_members", newSelection, { shouldValidate: true });
-                  }}>
-                    <Checkbox
-                      checked={form.watch("jury_members")?.includes(professor.id)}
-                      className="mr-2"
-                    />
-                    {`${professor.first_name} ${professor.last_name}`}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <div className="col-span-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                Select Professors
+                <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0">
+              <Command>
+                <CommandInput placeholder="Search professors..." />
+                <CommandEmpty>No professor found.</CommandEmpty>
+                <CommandGroup>
+                  {professors.map((professor) => (
+                    <CommandItem key={professor.id} onSelect={() => {
+                      const currentSelection = form.getValues("jury_members");
+                      const newSelection = currentSelection.includes(professor.id)
+                        ? currentSelection.filter((id) => id !== professor.id)
+                        : [...currentSelection, professor.id];
+                      form.setValue("jury_members", newSelection, { shouldValidate: true });
+                    }}>
+                      <Checkbox
+                        checked={form.watch("jury_members")?.includes(professor.id)}
+                        className="mr-2"
+                      />
+                      {`${professor.user.first_name} ${professor.user.last_name}`}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       {form.formState.errors.jury_members && (
         <p className="col-span-4 text-right text-sm text-red-500">

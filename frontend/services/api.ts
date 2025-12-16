@@ -94,7 +94,7 @@ export interface StatsData {
 
 export const getDashboardData = async (): Promise<StatsData> => {
   try {
-    const response = await api.get('/api/stats/'); // Change endpoint
+    const response = await api.get('/api/v1/stats/'); // Change endpoint
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -106,7 +106,7 @@ export const getDashboardData = async (): Promise<StatsData> => {
 
 export const getDefenses = async () => {
   try {
-    const response = await api.get('/api/defenses/')
+    const response = await api.get('/api/v1/defenses/')
     return response.data
   } catch (error: any) {
     if (error.response) {
@@ -118,7 +118,7 @@ export const getDefenses = async () => {
 
 export const updateDefenseStatus = async (id: number, status: 'accepted' | 'declined') => {
   try {
-    const response = await api.patch(`/api/defenses/${id}/`, { status });
+    const response = await api.patch(`/api/v1/defenses/${id}/`, { status });
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -129,16 +129,22 @@ export const updateDefenseStatus = async (id: number, status: 'accepted' | 'decl
 };
 
 // Define an interface for Professor data
-export interface Professor {
+export interface User {
   id: number;
   first_name: string;
   last_name: string;
-  // Add other fields if needed, e.g., specialty, user_id
+  email: string;
+}
+
+export interface Professor {
+  id: number;
+  user: User;
+  specialty?: string;
 }
 
 export const getProfessors = async (): Promise<Professor[]> => {
   try {
-    const response = await api.get('/api/professors/');
+    const response = await api.get('/api/v1/professors/');
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -157,7 +163,7 @@ export interface UpdateDefensePayload {
 
 export const updateDefenseDetails = async (id: number, payload: UpdateDefensePayload) => {
   try {
-    const response = await api.patch(`/api/defenses/${id}/`, payload);
+    const response = await api.patch(`/api/v1/defenses/${id}/`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response) {

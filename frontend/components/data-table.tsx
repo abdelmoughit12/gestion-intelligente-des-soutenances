@@ -200,7 +200,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
               {/* This DropdownMenuItem now triggers the Sheet */}
               <SheetTrigger asChild>
                 <DropdownMenuItem>
-                  Schedule Defense
+                  Accept
                 </DropdownMenuItem>
               </SheetTrigger>
               {/* Decline request remains a direct action */}
@@ -210,7 +210,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <SheetContent>
+          <SheetContent className="sm:max-w-xl">
             <SheetHeader>
               <SheetTitle>Schedule Defense for "{defense.title}"</SheetTitle>
               <SheetDescription>
