@@ -1,37 +1,41 @@
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
-# Import Base, engine, and SessionLocal from the database session module
-from .db.session import Base, engine, SessionLocal
+from .db.session import Base, engine
 from . import models
 
-# This line will create the database tables if they don't exist
-# as soon as the application starts.
-# When we define our models, they will inherit from Base, and so
-# they will be registered with this metadata.
-# Note: For production, you would typically use a migration tool like Alembic.
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="FastAPI Application with PostgreSQL")
+app = FastAPI(title="Soutenance Manager API")
 
-# Add CORS middleware
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-from .api import thesis_defense
-from .api import professor # New import
-from .api import stats # New import for stats
+# Serve uploaded files
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
-app.include_router(thesis_defense.router, prefix="/api", tags=["thesis-defenses"])
-app.include_router(professor.router, prefix="/api", tags=["professors"]) # New router inclusion
-app.include_router(stats.router, prefix="/api", tags=["statistics"]) # New router inclusion for stats
+# Routers
+from .api import thesis_defense, professor, stats, student
 
+app.include_router(thesis_defense.router, prefix="/api/v1", tags=["thesis-defenses"])
+app.include_router(professor.router, prefix="/api/v1", tags=["professors"])
+app.include_router(student.router, prefix="/api", tags=["students"])
+app.include_router(stats.router, prefix="/api", tags=["statistics"])
 
 @app.get("/")
 def read_root():

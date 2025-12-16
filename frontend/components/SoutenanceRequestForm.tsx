@@ -69,6 +69,35 @@ export default function SoutenanceRequestForm({ onSubmit, onCancel }: Soutenance
         pdfFile: null,
       })
     } catch (err: any) {
+      // If backend is not available, create a demo request for UI testing
+      if (err.message?.includes('Backend server is not running')) {
+        // Demo mode: Create a local request for UI testing
+        const demoRequest: SoutenanceRequest = {
+          id: Date.now().toString(),
+          title: formData.title,
+          domain: formData.domain,
+          status: 'pending',
+          pdfUrl: URL.createObjectURL(formData.pdfFile!),
+          summary: 'AI summary will be generated when backend is connected...',
+          similarityScore: undefined,
+          createdAt: new Date().toISOString(),
+        }
+
+        onSubmit(demoRequest)
+
+        // Reset form
+        setFormData({
+          title: '',
+          domain: 'Web',
+          pdfFile: null,
+        })
+
+        // Show info message instead of error
+        setError('⚠️ Backend not connected. Request saved locally for demo. Connect backend for full functionality.')
+        setTimeout(() => setError(null), 5000)
+        return
+      }
+
       setError(err.message || 'Failed to submit request. Please try again.')
       console.error('Error submitting request:', err)
     } finally {
@@ -103,7 +132,7 @@ export default function SoutenanceRequestForm({ onSubmit, onCancel }: Soutenance
             id="title"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
             placeholder="e.g., E-commerce Platform with AI Recommendations"
             required
           />
@@ -118,7 +147,7 @@ export default function SoutenanceRequestForm({ onSubmit, onCancel }: Soutenance
             id="domain"
             value={formData.domain}
             onChange={(e) => setFormData({ ...formData, domain: e.target.value as Domain })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
           >
             {DOMAINS.map((domain) => (
               <option key={domain} value={domain}>

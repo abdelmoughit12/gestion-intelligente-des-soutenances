@@ -1,14 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import SoutenanceRequestForm from './SoutenanceRequestForm'
 import RequestHistory from './RequestHistory'
 import { SoutenanceRequest } from '@/types/soutenance'
+import { getStudentRequests } from '@/services/api'
 
 export default function StudentDashboard() {
   const [showForm, setShowForm] = useState(false)
   const [requests, setRequests] = useState<SoutenanceRequest[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch requests on component mount
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setIsLoading(true)
+        const data = await getStudentRequests()
+        setRequests(data)
+        setError(null)
+      } catch (err: any) {
+        console.error('Failed to fetch requests:', err)
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRequests()
+  }, [])
 
   const handleRequestSubmit = (newRequest: SoutenanceRequest) => {
     setRequests([newRequest, ...requests])

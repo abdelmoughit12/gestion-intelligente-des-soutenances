@@ -1,7 +1,4 @@
-# FastAPI Backend Project
-
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+# FastAPI Backend (Docker)
 
 A modular FastAPI backend project structured for building REST APIs with routers, services, database models, and utilities.
 
@@ -21,58 +18,33 @@ backend/
 │   ├── services    # Business logic
 │   ├── utils       # Utility functions
 │   └── __pycache__
-└── venv            # Virtual environment
 ```
 
 ---
 
 ## Requirements
 
-- Python 3.10+
-- FastAPI
-- Uvicorn
-- Other dependencies in `requirements.txt`
+- Docker Desktop
+- Run via `docker compose` from the repo root
 
 ---
 
 ## Setup Instructions
 
-1. Clone the repository:
+From the repository root:
 
 ```
-git clone <your-repo-url>
-cd backend
-```
-
-2. Create and activate virtual environment:
-
-```
-python -m venv venv
-.\venv\Scripts\Activate    # Windows
-# source venv/bin/activate  # macOS/Linux
-```
-
-3. Upgrade pip (optional but recommended):
-
-```
-python -m pip install --upgrade pip
-```
-
-4. Install dependencies:
-
-```
-pip install -r requirements.txt
+docker compose up -d --build
 ```
 
 ---
 
 ## Running the Server
 
-```
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+The backend runs automatically via Docker Compose at:
 
-Access API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
 
 ---
 
@@ -88,8 +60,7 @@ Access API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ## Notes
 
-- Always activate the virtual environment before running the server.
-- Use `--reload` during development for automatic server restart.
+- For test data: `docker compose exec backend python scripts/create_test_data.py`
 
 ---
 
