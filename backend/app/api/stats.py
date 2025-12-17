@@ -4,7 +4,7 @@ from ..db.session import get_db
 from ..schemas import stats as schemas_stats
 from ..crud import crud_stats
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/stats/", response_model=schemas_stats.OverallStats)
 def read_overall_stats(

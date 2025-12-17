@@ -6,7 +6,7 @@ from .. import schemas, models
 from .. import crud
 from ..db.session import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/defenses/", response_model=List[schemas.ThesisDefense])
 def read_thesis_defenses(
