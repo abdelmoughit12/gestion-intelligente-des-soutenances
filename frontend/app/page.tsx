@@ -1,6 +1,6 @@
-import StudentDashboard from '@/components/StudentDashboard'
+import MultiPageDashboard from '@/components/MultiPageDashboard'
 
 export default function Home() {
-  return <StudentDashboard />
+  return <MultiPageDashboard />
 }
 

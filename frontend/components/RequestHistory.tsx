@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, CheckCircle, XCircle, FileText, Calendar, Users } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, FileText, Calendar, Users, AlertCircle } from 'lucide-react'
 import { SoutenanceRequest } from '@/types/soutenance'
 import { format } from 'date-fns'
 
@@ -58,11 +58,37 @@ export default function RequestHistory({ requests }: RequestHistoryProps) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
-                  <div className="flex items-center space-x-1">
-                    <span className="font-medium">Domain:</span>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                      {request.domain}
-                    </span>
+                  <div className="flex flex-col space-y-1">
+                    <span className="font-medium text-gray-700">Domain Confidence:</span>
+                    {(() => {
+                      try {
+                        // Parse domain if it's JSON string
+                        const domainData = typeof request.domain === 'string' && request.domain.startsWith('{')
+                          ? JSON.parse(request.domain)
+                          : { [request.domain]: 1.0 }
+
+                        return (
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(domainData)
+                              .sort(([, a]: any, [, b]: any) => b - a)
+                              .map(([domain, confidence]: any) => (
+                                <span
+                                  key={domain}
+                                  className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium"
+                                >
+                                  {domain}: {Math.round(confidence * 100)}%
+                                </span>
+                              ))}
+                          </div>
+                        )
+                      } catch {
+                        return (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                            {request.domain}
+                          </span>
+                        )
+                      }
+                    })()}
                   </div>
 
                   <div className="flex items-center space-x-1">
@@ -91,16 +117,42 @@ export default function RequestHistory({ requests }: RequestHistoryProps) {
                 </div>
 
                 {request.summary && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-700 mb-1">AI Summary:</p>
-                    <p className="text-sm text-gray-600">{request.summary}</p>
+                  <div className={`mt-4 p-3 rounded-lg ${request.summary.includes('placeholder') || request.summary.includes('AI module will replace')
+                      ? 'bg-yellow-50 border border-yellow-200'
+                      : 'bg-blue-50 border border-blue-200'
+                    }`}>
+                    <div className="flex items-start space-x-2">
+                      {request.summary.includes('placeholder') || request.summary.includes('AI module will replace') ? (
+                        <>
+                          <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-yellow-800 mb-1">⚠ AI Summary Unavailable</p>
+                            <p className="text-sm text-yellow-700">{request.summary}</p>
+                            <p className="text-xs text-yellow-600 mt-1">Check backend logs for details</p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-800 mb-1">✓ AI Summary:</p>
+                          <p className="text-sm text-blue-900">{request.summary}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {request.similarityScore !== undefined && (
                   <div className="mt-3">
-                    <p className="text-sm text-gray-600">
-                      Similarity Score: <span className="font-medium">{request.similarityScore}%</span>
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">Similarity Check:</span>{' '}
+                      <span className={`font-semibold ${request.similarityScore > 70 ? 'text-red-600' :
+                          request.similarityScore > 40 ? 'text-yellow-600' :
+                            'text-green-600'
+                        }`}>
+                        {request.similarityScore}%
+                      </span>
+                      {request.similarityScore > 70 && <span className="text-red-600 ml-2">⚠ High similarity!</span>}
+                      {request.similarityScore === 0 && <span className="text-gray-500 ml-2">(No previous reports)</span>}
                     </p>
                   </div>
                 )}

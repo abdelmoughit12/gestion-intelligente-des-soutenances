@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from .. import schemas, models
 from .. import crud
+from ..services import ai
 from ..db.session import get_db
 
 router = APIRouter()
@@ -90,11 +91,54 @@ async def create_soutenance_request(
         except Exception:
             pass
     
-    # TODO: Implement AI analysis for summary, domain detection, and similarity score
-    # This would call your AI service here
-    ai_summary = f"AI-generated summary for {title}. This will be implemented with actual AI integration."
-    ai_domain = domain  # For now, use the domain provided by student
-    ai_similarity_score = None  # Will be calculated by AI
+    # AI (Gemini) with safe fallbacks - pass actual PDF path for text extraction
+    import logging
+    import json
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"\n{'='*70}")
+    logger.info(f"AI PROCESSING START - Title: {title}")
+    logger.info(f"PDF Path: {abs_path}")
+    logger.info(f"Student Claimed Domain: {domain}")
+    logger.info(f"{'='*70}")
+    
+    # Extract and log PDF content
+    pdf_text = ai.extract_pdf_text(str(abs_path))
+    logger.info(f"Extracted PDF Text: {len(pdf_text)} characters")
+    logger.info(f"Preview: {pdf_text[:200]}...")
+    
+    # Generate summary
+    logger.info("\nGenerating AI Summary...")
+    ai_summary = ai.summarize(title, pdf_path=str(abs_path))
+    logger.info(f"AI Summary: {ai_summary}")
+    
+    # Get domain confidence scores
+    logger.info("\nClassifying Domain...")
+    domain_confidence = ai.classify_domain(title, domain, pdf_path=str(abs_path))
+    logger.info(f"Domain Confidence: {domain_confidence}")
+    # Store as JSON string for database
+    ai_domain = json.dumps(domain_confidence)
+    
+    # Calculate similarity with previous reports
+    logger.info("\nCalculating Similarity...")
+    prior_defenses = crud.thesis_defense.get_by_student(db=db, student_id=student_id)
+    prior_reports = []
+    for defense in prior_defenses:
+        if defense.report:
+            prior_reports.append({
+                'id': defense.id,
+                'title': defense.title,
+                'content': defense.report.ai_summary or defense.title
+            })
+    
+    similarity_result = ai.similarity_score(title, prior_reports, pdf_path=str(abs_path))
+    logger.info(f"Similarity Result: {similarity_result}")
+    # Store similarity as float (max similarity score)
+    ai_similarity_score = similarity_result['max_similarity'] if similarity_result else 0.0
+    
+    logger.info(f"\n{'='*70}")
+    logger.info("AI PROCESSING COMPLETE")
+    logger.info(f"{'='*70}\n")
     
     # Create Report entry with the saved relative path
     report_data = schemas.ReportCreate(

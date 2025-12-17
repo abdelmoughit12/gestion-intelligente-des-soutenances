@@ -5,21 +5,43 @@ import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide
 import SoutenanceRequestForm from './SoutenanceRequestForm'
 import RequestHistory from './RequestHistory'
 import { SoutenanceRequest } from '@/types/soutenance'
-import { getStudentRequests } from '@/services/api'
+import { getStudentRequests, getDashboardData } from '@/services/api'
 
 export default function StudentDashboard() {
   const [showForm, setShowForm] = useState(false)
   const [requests, setRequests] = useState<SoutenanceRequest[]>([])
+  const [stats, setStats] = useState<{ total: number; pending: number; accepted: number; refused: number; recent_requests?: SoutenanceRequest[]; upcoming_defenses?: SoutenanceRequest[] }>({ total: 0, pending: 0, accepted: 0, refused: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch requests on component mount
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true)
-        const data = await getStudentRequests()
-        setRequests(data)
+        const [requestsData, dashboardData] = await Promise.all([
+          getStudentRequests(),
+          getDashboardData().catch(() => null),
+        ])
+        setRequests(requestsData)
+        if (dashboardData) {
+          setStats({
+            total: dashboardData.total,
+            pending: dashboardData.pending,
+            accepted: dashboardData.accepted,
+            refused: dashboardData.refused,
+            recent_requests: dashboardData.recent_requests,
+            upcoming_defenses: dashboardData.upcoming_defenses,
+          })
+        } else {
+          // Fallback counts from list if dashboard endpoint fails
+          setStats({
+            total: requestsData.length,
+            pending: requestsData.filter(r => r.status === 'pending').length,
+            accepted: requestsData.filter(r => r.status === 'accepted').length,
+            refused: requestsData.filter(r => r.status === 'refused').length,
+          })
+        }
         setError(null)
       } catch (err: any) {
         console.error('Failed to fetch requests:', err)
@@ -29,23 +51,20 @@ export default function StudentDashboard() {
       }
     }
 
-    fetchRequests()
+    fetchData()
   }, [])
 
   const handleRequestSubmit = (newRequest: SoutenanceRequest) => {
-    setRequests([newRequest, ...requests])
+    const updated = [newRequest, ...requests]
+    setRequests(updated)
+    setStats({
+      total: updated.length,
+      pending: updated.filter(r => r.status === 'pending').length,
+      accepted: updated.filter(r => r.status === 'accepted').length,
+      refused: updated.filter(r => r.status === 'refused').length,
+    })
     setShowForm(false)
   }
-
-  const getStatusCounts = () => {
-    return {
-      pending: requests.filter(r => r.status === 'pending').length,
-      accepted: requests.filter(r => r.status === 'accepted').length,
-      refused: requests.filter(r => r.status === 'refused').length,
-    }
-  }
-
-  const counts = getStatusCounts()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -75,7 +94,7 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{counts.pending}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.pending}</p>
               </div>
               <Clock className="h-12 w-12 text-yellow-500" />
             </div>
@@ -85,7 +104,7 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Accepted</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{counts.accepted}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.accepted}</p>
               </div>
               <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
@@ -95,7 +114,7 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Refused</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{counts.refused}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.refused}</p>
               </div>
               <XCircle className="h-12 w-12 text-red-500" />
             </div>
