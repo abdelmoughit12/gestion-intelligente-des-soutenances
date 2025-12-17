@@ -19,6 +19,8 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin1234}@postgres:5432/${POSTGRES_DB:-Ai_Soutenance}
     ports:

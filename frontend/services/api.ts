@@ -1,13 +1,27 @@
-import axios from 'axios'
+import axios from 'axios';
+import { getToken } from './auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-})
+});
+
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 const toFileUrl = (maybePath?: string | null) => {
   if (!maybePath) return ''
@@ -28,7 +42,7 @@ export const submitSoutenanceRequest = async (
   formData: FormData
 ): Promise<SubmitRequestResponse> => {
   try {
-    const response = await api.post('/api/students/soutenance-requests', formData, {
+    const response = await api.post('/api/v1/students/soutenance-requests', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -56,7 +70,7 @@ export const submitSoutenanceRequest = async (
 
 export const getStudentRequests = async () => {
   try {
-    const response = await api.get('/api/students/soutenance-requests')
+    const response = await api.get('/api/v1/students/soutenance-requests')
     // Transform backend data to match frontend types
     return response.data.map((defense: any) => ({
       id: defense.id.toString(),
@@ -78,7 +92,7 @@ export const getStudentRequests = async () => {
 
 export const getDashboardData = async () => {
   try {
-    const response = await api.get('/api/students/dashboard')
+    const response = await api.get('/api/v1/students/dashboard')
     return response.data
   } catch (error: any) {
     if (error.response) {

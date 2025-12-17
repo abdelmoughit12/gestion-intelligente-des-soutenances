@@ -2,9 +2,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import schemas
+from .. import schemas, models
 from .. import crud
 from ..db.session import get_db
+from ..dependencies import get_current_user, require_manager
 
 router = APIRouter()
 
@@ -12,7 +13,8 @@ router = APIRouter()
 def read_thesis_defenses(
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: models.user.User = Depends(get_current_user)
 ):
     """
     Retrieve all thesis defenses.
@@ -27,6 +29,7 @@ def update_thesis_defense(
     db: Session = Depends(get_db),
     defense_id: int,
     defense_in: schemas.ThesisDefenseUpdate,
+    current_user: models.user.User = Depends(require_manager)
 ):
     """
     Update a thesis defense (e.g., to accept/refuse or schedule it).
@@ -34,7 +37,6 @@ def update_thesis_defense(
     defense = crud.thesis_defense.get(db=db, id=defense_id)
     if not defense:
         raise HTTPException(status_code=404, detail="Thesis defense not found")
-    # TODO: Add security here to ensure the user is a manager
     updated_defense = crud.thesis_defense.update(db=db, db_obj=defense, obj_in=defense_in)
     return updated_defense
 
@@ -43,7 +45,8 @@ def update_thesis_defense(
 def read_jury_for_defense(
     *,
     db: Session = Depends(get_db),
-    defense_id: int
+    defense_id: int,
+    current_user: models.user.User = Depends(get_current_user)
 ):
     """
     Retrieve jury members for a specific thesis defense.
@@ -57,7 +60,8 @@ def create_jury_member_for_defense(
     *,
     db: Session = Depends(get_db),
     defense_id: int,
-    jury_member_in: schemas.JuryMemberCreate
+    jury_member_in: schemas.JuryMemberCreate,
+    current_user: models.user.User = Depends(require_manager)
 ):
     """
     Assign a professor to the jury for a specific thesis defense.

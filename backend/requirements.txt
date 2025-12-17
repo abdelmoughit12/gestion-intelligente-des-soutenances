@@ -17,5 +17,10 @@ uvicorn==0.38.0
 watchfiles
 psycopg2-binary
 python-dotenv
+email-validator
 pydantic[email]
 python-multipart
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1

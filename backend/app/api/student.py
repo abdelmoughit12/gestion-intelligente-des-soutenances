@@ -9,8 +9,9 @@ from uuid import uuid4
 from .. import schemas, models
 from .. import crud
 from ..db.session import get_db
+from ..dependencies import get_current_user, require_student
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_student)])
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path("uploads")
@@ -32,19 +33,20 @@ def _sanitize_filename(filename: str) -> str:
     return sanitized or "upload.pdf"
 
 
-@router.post("/students/soutenance-requests", response_model=schemas.ThesisDefense)
+@router.post("/soutenance-requests", response_model=schemas.ThesisDefense)
 async def create_soutenance_request(
     *,
     db: Session = Depends(get_db),
     title: str = Form(...),
     domain: str = Form(...),
     pdf: UploadFile = File(...),
-    student_id: int = Form(1),  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(get_current_user)
 ):
     """
     Create a new soutenance request (thesis defense).
     Uploads PDF report, creates report entry, and creates thesis defense entry.
     """
+    student_id = current_user.id
     # Validate PDF file
     if not pdf.filename or not pdf.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
@@ -119,30 +121,30 @@ async def create_soutenance_request(
     return defense
 
 
-@router.get("/students/soutenance-requests", response_model=List[schemas.ThesisDefense])
+@router.get("/soutenance-requests", response_model=List[schemas.ThesisDefense])
 def get_student_requests(
     db: Session = Depends(get_db),
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(get_current_user),
     skip: int = 0,
     limit: int = 100
 ):
     """
     Retrieve all soutenance requests for a specific student.
     """
-    defenses = crud.thesis_defense.get_by_student(db=db, student_id=student_id, skip=skip, limit=limit)
+    defenses = crud.thesis_defense.get_by_student(db=db, student_id=current_user.id, skip=skip, limit=limit)
     return defenses
 
 
-@router.get("/students/dashboard", response_model=schemas.StudentDashboardStats)
+@router.get("/dashboard", response_model=schemas.StudentDashboardStats)
 def get_student_dashboard(
     db: Session = Depends(get_db),
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(get_current_user)
 ):
     """
     Get dashboard statistics for a student.
     Returns count of pending, accepted, and refused requests.
     """
-    defenses = crud.thesis_defense.get_by_student(db=db, student_id=student_id)
+    defenses = crud.thesis_defense.get_by_student(db=db, student_id=current_user.id)
 
     today = date.today()
     upcoming_cutoff = today + timedelta(days=7)
@@ -162,12 +164,12 @@ def get_student_dashboard(
     )
 
 
-@router.get("/students/requests/{defense_id}", response_model=schemas.ThesisDefense)
+@router.get("/requests/{defense_id}", response_model=schemas.ThesisDefense)
 def get_single_request(
     *,
     db: Session = Depends(get_db),
     defense_id: int,
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(get_current_user)
 ):
     """
     Get details of a specific soutenance request.
@@ -177,7 +179,7 @@ def get_single_request(
         raise HTTPException(status_code=404, detail="Request not found")
     
     # Ensure the request belongs to this student
-    if defense.student_id != student_id:
+    if defense.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this request")
     
     return defense

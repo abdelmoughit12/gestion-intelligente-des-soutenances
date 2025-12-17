@@ -44,23 +44,33 @@ This project supports two ways to run locally.
 
 #### Option A (Recommended): Run Everything with Docker
 
-```bash
-# Build + start PostgreSQL + Backend + Frontend
-docker compose up --build
+1.  **Build and Start Services:**
 
-# Or run in background
-# docker compose up -d --build
-```
+    ```bash
+    # Build and start all services (PostgreSQL, Backend, Frontend) in detached mode
+    docker compose up --build -d
+    ```
 
-Windows shortcut:
+2.  **Prepare Backend Environment (for data seeding):**
+    Ensure a `.env` file exists in the `backend/` directory. If not, copy from `.env.example`:
+    ```bash
+    cp backend/.env.example backend/.env # For Linux/macOS
+    # For Windows PowerShell:
+    # Copy-Item backend\.env.example backend\.env
+    ```
+    (Note: The `SECRET_KEY` in `backend/.env` should be a strong, random 32-character key for production, but can be left as default for development.)
 
-```bash
-start.bat
-```
+3.  **Seed Initial Data:**
+    This step populates the database with essential users (admin, student, professor, manager).
+    ```bash
+    docker compose run --rm backend python scripts/create_initial_data.py
+    ```
 
-- Frontend: **http://localhost:3000**
-- Backend API: **http://localhost:8000**
-- Swagger docs: **http://localhost:8000/docs**
+4.  **Access Applications:**
+
+    - Frontend: **http://localhost:3000**
+    - Backend API: **http://localhost:8000**
+    - Swagger docs: **http://localhost:8000/docs**
 
 #### Option B (Manual Dev): Frontend Local, DB+Backend in Docker
 
@@ -160,13 +170,16 @@ The system uses PostgreSQL with the following main tables:
 
 ## 🧪 Testing
 
-### Test Student Account
+### Test Users
 
-```
-Email: test.student@example.com
-User ID: 1
-Major: Computer Science
-```
+You can use the following credentials to log in and test the application with different roles. The password for all users is `password`.
+
+| Role      | Email                  | Password   |
+|-----------|------------------------|------------|
+| Student   | student@example.com    | `password` |
+| Professor | professor@example.com  | `password` |
+| Manager   | manager@example.com    | `password` |
+| Admin     | admin@example.com      | `password` |
 
 ### API Testing
 
@@ -314,6 +327,37 @@ cd frontend
 rm -rf node_modules package-lock.json
 npm install
 ```
+
+### Login and Authentication Troubleshooting
+
+If you encounter issues during login, refer to these common problems and their solutions:
+
+-   **`401 Unauthorized` errors in backend logs (`INFO: ... 401 Unauthorized`)**:
+    This indicates that the provided username (email) or password is incorrect. Ensure you are using the default credentials created by the `create_initial_data.py` script.
+    *   **Default Credentials (password for all):**
+        *   `student@example.com`
+        *   `professor@example.com`
+        *   `manager@example.com`
+        *   `admin@example.com`
+    *   **Solution:** Verify the backend database has been seeded. Follow step 3 in "Quick Start -> Option A" to run `docker compose run --rm backend python scripts/create_initial_data.py`.
+
+-   **`Failed to load resource: net::ERR_NAME_NOT_RESOLVED` or `AxiosError` in browser console**:
+    This means your frontend application cannot reach the backend API.
+    *   **Common Causes:**
+        *   The backend service is not running.
+        *   The frontend's `NEXT_PUBLIC_API_URL` environment variable is misconfigured for client-side access.
+    *   **Solution:**
+        1.  Ensure all Docker services are running: `docker compose ps`. If any service is down, run `docker compose up -d`.
+        2.  Verify the `NEXT_PUBLIC_API_URL` in `docker-compose.yml` for the frontend service is set to `http://localhost:8000`. If you changed it, revert it and rebuild the frontend:
+            ```bash
+            docker compose build frontend
+            docker compose up -d --force-recreate frontend
+            ```
+            Then access the frontend at `http://localhost:3000`.
+
+-   **`AttributeError: module 'app.crud' has no attribute 'user'` in backend logs**:
+    This is an internal backend issue related to how database operations for users are exposed.
+    *   **Solution:** This was addressed by ensuring `app/crud/crud_user.py` is correctly imported in `app/crud/__init__.py`. If you encounter this, ensure your codebase is up-to-date with the latest changes.
 
 ---
 
