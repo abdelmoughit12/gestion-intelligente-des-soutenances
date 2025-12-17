@@ -94,7 +94,7 @@ export interface StatsData {
 
 export const getDashboardData = async (): Promise<StatsData> => {
   try {
-    const response = await api.get('/api/v1/stats/'); // Change endpoint
+    const response = await api.get('/api/stats/'); // Change endpoint
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -137,7 +137,6 @@ export interface User {
 }
 
 export interface Professor {
-  id: number;
   user: User;
   specialty?: string;
 }
@@ -158,7 +157,6 @@ export interface UpdateDefensePayload {
   status?: 'accepted' | 'declined' | 'pending';
   defense_date?: string;
   defense_time?: string;
-  jury_member_ids?: number[];
 }
 
 export const updateDefenseDetails = async (id: number, payload: UpdateDefensePayload) => {
@@ -168,6 +166,37 @@ export const updateDefenseDetails = async (id: number, payload: UpdateDefensePay
   } catch (error: any) {
     if (error.response) {
       throw new Error(error.response.data.detail || 'Failed to update defense details');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
+
+export interface JuryMemberCreatePayload {
+  thesis_defense_id: number;
+  professor_id: number;
+  role: string;
+}
+
+export const assignJuryMember = async (defenseId: number, professorId: number, role: string) => {
+  const payload: JuryMemberCreatePayload = {
+    thesis_defense_id: defenseId,
+    professor_id: professorId,
+    role: role,
+  };
+  try {
+    const response = await api.post(`/api/v1/defenses/${defenseId}/jury`, payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      // Don't throw for 409 conflict, it means the assignment already exists.
+      if (error.response.status === 409) {
+        return null;
+      }
+      let detail = error.response.data.detail;
+      if (typeof detail === 'object' && detail !== null) {
+        detail = JSON.stringify(detail);
+      }
+      throw new Error(detail || `Failed to assign professor ${professorId}`);
     }
     throw new Error('Network error. Please check your connection.');
   }

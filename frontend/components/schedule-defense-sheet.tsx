@@ -16,9 +16,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getProfessors, Professor, updateDefenseDetails, assignJuryMember } from "@/services/api"; // Import Professor and getProfessors
 
-import { getProfessors, Professor, updateDefenseDetails } from "@/services/api"; // Import Professor and getProfessors
-
+// Define the enum for JuryRole
+const JuryRole = z.enum(["president", "secretary", "examiner", "member"]);
 
 // Define the form schema
 const formSchema = z.object({
@@ -26,7 +28,10 @@ const formSchema = z.object({
     required_error: "A defense date is required.",
   }),
   defense_time: z.string().min(1, "A defense time is required."),
-  jury_members: z.array(z.number()).min(1, "At least one jury member must be selected."), // Array of professor IDs
+  jury_members: z.array(z.object({
+    professorId: z.number(),
+    role: JuryRole,
+  })).min(1, "At least one jury member must be selected."),
 });
 
 export function ScheduleDefenseSheet({
@@ -41,13 +46,25 @@ export function ScheduleDefenseSheet({
     defaultValues: {
       defense_date: defense.defense_date ? new Date(defense.defense_date) : undefined,
       defense_time: defense.defense_time || "",
-      jury_members: defense.jury_members ? defense.jury_members.map((jm: any) => jm.professor_id) : [], // Pre-fill if available
+      jury_members: defense.jury_members ? defense.jury_members.map((jm: any) => ({ professorId: jm.professor_id, role: jm.role || 'examiner' })) : [], // Pre-fill if available
     },
   });
 
   const [professors, setProfessors] = React.useState<Professor[]>([]);
   const [professorsLoading, setProfessorsLoading] = React.useState(true);
   const [professorsError, setProfessorsError] = React.useState<string | null>(null);
+  const [isJuryPopoverOpen, setJuryPopoverOpen] = React.useState(false);
+
+  const toggleProfessor = (professorId: number) => {
+    const currentSelection = form.getValues("jury_members");
+    const existingMember = currentSelection.find(member => member.professorId === professorId);
+
+    if (existingMember) {
+      form.setValue("jury_members", currentSelection.filter(member => member.professorId !== professorId), { shouldValidate: true });
+    } else {
+      form.setValue("jury_members", [...currentSelection, { professorId, role: "examiner" }], { shouldValidate: true });
+    }
+  };
 
   React.useEffect(() => {
     async function loadProfessors() {
@@ -64,20 +81,47 @@ export function ScheduleDefenseSheet({
   }, []);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    toast.info("Scheduling defense...", { id: "schedule-defense" });
+    toast.info("Scheduling defense and assigning jury...", { id: "schedule-defense" });
     try {
+      // Step 1: Update defense status, date, and time
       await updateDefenseDetails(defense.id, {
-        status: 'accepted', // Automatically set to accepted on scheduling
+        status: 'accepted',
         defense_date: format(values.defense_date, "yyyy-MM-dd"),
         defense_time: values.defense_time,
-        jury_member_ids: values.jury_members, // Pass selected professor IDs
       });
-      toast.success("Defense scheduled successfully!", { id: "schedule-defense" });
+
+      // Step 2: Assign each jury member with a specific role
+      const juryAssignmentPromises = values.jury_members.map(({ professorId, role }) => {
+        return assignJuryMember(defense.id, professorId, role);
+      });
+      await Promise.all(juryAssignmentPromises);
+
+      toast.success("Defense scheduled and jury assigned successfully!", { id: "schedule-defense" });
       onDefenseScheduled(); // Refresh the table
     } catch (error: any) {
       toast.error(error.message || "Failed to schedule defense.", { id: "schedule-defense" });
     }
   };
+
+  const juryMembers = form.watch("jury_members");
+
+  const professorItems = React.useMemo(() => {
+    return professors
+      .filter((p) => p.user && p.user.id != null)
+      .map((professor) => (
+        <CommandItem
+          key={professor.user.id}
+          value={professor.user.id.toString()}
+          onSelect={() => toggleProfessor(professor.user.id)}
+        >
+          <Checkbox
+            checked={juryMembers?.some(member => member.professorId === professor.user.id)}
+            className="mr-2"
+          />
+          {`${professor.user.first_name} ${professor.user.last_name}`}
+        </CommandItem>
+      ));
+  }, [professors, juryMembers]);
 
   if (professorsLoading) {
     return <div>Loading professors...</div>;
@@ -141,33 +185,19 @@ export function ScheduleDefenseSheet({
           Jury Members
         </Label>
         <div className="col-span-3">
-          <Popover>
+          <Popover open={isJuryPopoverOpen} onOpenChange={setJuryPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
                 Select Professors
                 <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-0">
+            <PopoverContent className="w-96 p-0" align="start">
               <Command>
                 <CommandInput placeholder="Search professors..." />
                 <CommandEmpty>No professor found.</CommandEmpty>
                 <CommandGroup>
-                  {professors.map((professor) => (
-                    <CommandItem key={professor.id} onSelect={() => {
-                      const currentSelection = form.getValues("jury_members");
-                      const newSelection = currentSelection.includes(professor.id)
-                        ? currentSelection.filter((id) => id !== professor.id)
-                        : [...currentSelection, professor.id];
-                      form.setValue("jury_members", newSelection, { shouldValidate: true });
-                    }}>
-                      <Checkbox
-                        checked={form.watch("jury_members")?.includes(professor.id)}
-                        className="mr-2"
-                      />
-                      {`${professor.user.first_name} ${professor.user.last_name}`}
-                    </CommandItem>
-                  ))}
+                  {professorItems}
                 </CommandGroup>
               </Command>
             </PopoverContent>
@@ -180,6 +210,35 @@ export function ScheduleDefenseSheet({
         </p>
       )}
 
+      {juryMembers.map((member, index) => {
+        const professor = professors.find(p => p.user.id === member.professorId);
+        return (
+          <div key={member.professorId} className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">{professor?.user.first_name} {professor?.user.last_name}</Label>
+            <div className="col-span-3">
+              <Select
+                value={member.role}
+                onValueChange={(value) => {
+                  const newJuryMembers = [...juryMembers];
+                  newJuryMembers[index].role = value as z.infer<typeof JuryRole>;
+                  form.setValue("jury_members", newJuryMembers, { shouldValidate: true });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JuryRole.options.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+      })}
 
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting && (

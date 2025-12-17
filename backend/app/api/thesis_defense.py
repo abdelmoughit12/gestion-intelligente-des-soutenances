@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import schemas
+from .. import schemas, models
 from .. import crud
 from ..db.session import get_db
 
@@ -86,3 +86,32 @@ def create_jury_member_for_defense(
 
     jury_member = crud.jury_member.create(db=db, obj_in=jury_member_in)
     return jury_member
+
+
+@router.put("/defenses/{defense_id}/jury/{professor_id}", response_model=schemas.JuryMember)
+def update_jury_member(
+    *,
+    db: Session = Depends(get_db),
+    defense_id: int,
+    professor_id: int,
+    jury_member_in: schemas.JuryMemberUpdate,
+):
+    """
+    Update a jury member for a specific thesis defense.
+    """
+    # Check if thesis defense exists
+    thesis_defense = crud.thesis_defense.get(db=db, id=defense_id)
+    if not thesis_defense:
+        raise HTTPException(status_code=404, detail="Thesis defense not found")
+
+    # Get the specific jury member using defense_id and professor_id
+    jury_member = crud.jury_member.get(db=db, thesis_defense_id=defense_id, professor_id=professor_id)
+    if not jury_member:
+        raise HTTPException(status_code=404, detail="Jury member not found for this defense and professor")
+
+    # Ensure the jury member belongs to the correct defense (redundant if using composite key, but good for safety)
+    if jury_member.thesis_defense_id != defense_id or jury_member.professor_id != professor_id:
+        raise HTTPException(status_code=400, detail="Jury member does not match the provided defense or professor IDs")
+
+    updated_jury_member = crud.jury_member.update(db=db, db_obj=jury_member, obj_in=jury_member_in)
+    return updated_jury_member

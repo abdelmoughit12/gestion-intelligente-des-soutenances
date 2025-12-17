@@ -21,3 +21,8 @@ class JuryMember(JuryMemberBase):
 
     class Config:
         from_attributes = True
+
+# Properties to receive via API on update
+class JuryMemberUpdate(JuryMemberBase):
+    professor_id: int | None = None
+    role: JuryRole | None = None
