@@ -1,0 +1,46 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ===== Local Environments =====
+venv/
+env/
+ENV/
+.env
+!.env.example
+
+# ===== Pytest / coverage =====
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ===== Database / Migrations =====
+*.db
+*.sqlite3
+*.log
+
+# ===== Mac / Windows =====
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.bak
+
+# ===== Uvicorn / FastAPI =====
+*.pid
+
+# ===== Uploads =====
+uploads/
+*.pdf
