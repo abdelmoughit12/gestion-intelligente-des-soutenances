@@ -44,7 +44,7 @@ export const submitSoutenanceRequest = async (
   formData: FormData
 ): Promise<SubmitRequestResponse> => {
   try {
-    const response = await api.post('/api/students/soutenance-requests', formData, {
+    const response = await api.post('/api/students/soutenance-requests/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -70,7 +70,7 @@ export const submitSoutenanceRequest = async (
 
 export const getStudentRequests = async () => {
   try {
-    const response = await api.get('/api/students/soutenance-requests')
+    const response = await api.get('/api/students/soutenance-requests/')
     return response.data.map((defense: any) => ({
       id: defense.id.toString(),
       title: defense.title,
@@ -132,7 +132,7 @@ export const getDefenses = async () => {
 // Functions from HEAD branch
 export const getProfessorAssignedSoutenances = async () => {
   try {
-    const response = await api.get('/api/professors/assigned-soutenances')
+    const response = await api.get('/api/professors/assigned-soutenances/')
     return response.data
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || 'Failed to fetch assigned soutenances')
@@ -141,7 +141,7 @@ export const getProfessorAssignedSoutenances = async () => {
 
 export const getSoutenanceDetail = async (defenseId: number) => {
   try {
-    const response = await api.get(`/api/professors/soutenances/${defenseId}`)
+    const response = await api.get(`/api/professors/soutenances/${defenseId}/`)
     return response.data
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || 'Failed to fetch soutenance detail')
@@ -150,7 +150,7 @@ export const getSoutenanceDetail = async (defenseId: number) => {
 
 export const downloadReport = async (defenseId: number) => {
   try {
-    const response = await api.get(`/api/professors/soutenances/${defenseId}/report/download`, {
+    const response = await api.get(`/api/professors/soutenances/${defenseId}/report/download/`, {
       responseType: 'blob'
     })
     return response.data
@@ -161,7 +161,7 @@ export const downloadReport = async (defenseId: number) => {
 
 export const getProfessorNotifications = async () => {
   try {
-    const response = await api.get('/api/professors/notifications')
+    const response = await api.get('/api/professors/notifications/')
     return response.data
   } catch (error: any) {
     throw new Error('Failed to fetch notifications')
@@ -170,7 +170,7 @@ export const getProfessorNotifications = async () => {
 
 export const markNotificationAsRead = async (notificationId: number) => {
   try {
-    await api.patch(`/api/professors/notifications/${notificationId}/read`)
+    await api.patch(`/api/professors/notifications/${notificationId}/read/`)
   } catch (error: any) {
     throw new Error('Failed to mark notification as read')
   }
@@ -182,7 +182,7 @@ export const submitEvaluation = async (
 ) => {
   try {
     const response = await api.post(
-      `/api/professors/soutenances/${soutenanceId}/evaluation`,
+      `/api/professors/soutenances/${soutenanceId}/evaluation/`,
       evaluationData
     )
     return response.data
@@ -193,7 +193,7 @@ export const submitEvaluation = async (
 
 export const getEvaluations = async () => {
   try {
-    const response = await api.get('/api/professors/evaluations')
+    const response = await api.get('/api/professors/evaluations/')
     return response.data
   } catch (error: any) {
     throw new Error('Failed to fetch evaluations')
@@ -272,7 +272,7 @@ export const assignJuryMember = async (defenseId: number, professorId: number, r
   };
   try {
     // Standardizing path: removing /v1
-    const response = await api.post(`/api/defenses/${defenseId}/jury`, payload);
+    const response = await api.post(`/api/defenses/${defenseId}/jury/`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response) {

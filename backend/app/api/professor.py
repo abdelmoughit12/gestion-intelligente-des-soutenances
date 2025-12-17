@@ -29,6 +29,7 @@ from ..models import (
     Notification,
     ProfessorEvaluation
 )
+from .. import crud, schemas
 from ..db.session import SessionLocal
 
 router = APIRouter(prefix="/api/professors", tags=["professors"])
@@ -47,6 +48,18 @@ def get_current_professor(
 ) -> dict:
     
     return {"id": x_professor_id, "role": "professor"}
+
+@router.get("/", response_model=List[schemas.Professor])
+def read_professors(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    """
+    Retrieve all professors.
+    """
+    professors = crud.professor.get_multi(db, skip=skip, limit=limit)
+    return professors
 
 class AssignedSoutenanceSchema(BaseModel):
    

@@ -15,7 +15,8 @@ export default function Page() {
     async function fetchData() {
       try {
         const jsonData = await getDefenses(); // Use the API function
-        setData(jsonData);
+        const acceptedDefenses = jsonData.filter((defense: any) => defense.status === 'accepted');
+        setData(acceptedDefenses);
       } catch (e: any) {
         setError(e.message);
       } finally {
