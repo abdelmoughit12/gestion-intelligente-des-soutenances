@@ -29,8 +29,10 @@ export default function EvaluationForm({
   const [success, setSuccess] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
+  const isEditMode = initialData.score !== undefined
+
   // Validation
-  const isValid = score >= 0 && score <= 20 && comments.trim().length >= 10
+  const isValid = score >= 0 && score <= 20 
   const scorePercentage = (score / 20) * 100
 
   const getScoreColor = (value: number) => {
@@ -79,7 +81,7 @@ export default function EvaluationForm({
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Évaluer la Soutenance</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">{isEditMode ? 'Modifier l\'évaluation' : 'Évaluer la Soutenance'}</h3>
         <p className="text-sm text-gray-600">Étudiant: {studentName}</p>
       </div>
 
@@ -136,9 +138,7 @@ export default function EvaluationForm({
       <div>
         <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-2">
           Commentaires Détaillés
-          <span className="text-gray-500 font-normal text-xs ml-2">
-            (minimum 10 caractères)
-          </span>
+
         </label>
         <textarea
           id="comments"
@@ -147,11 +147,9 @@ export default function EvaluationForm({
           disabled={loading}
           placeholder="Décrivez les points forts et les points à améliorer..."
           rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 disabled:bg-gray-100"
+          className="w-full px-3 py-2 border border-gray-900 text-black bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 disabled:bg-gray-100"
         />
-        <div className="mt-1 text-xs text-gray-500">
-          {comments.length} caractères (minimum 10)
-        </div>
+      
       </div>
 
       {/* Boutons d'action */}
@@ -168,7 +166,7 @@ export default function EvaluationForm({
                 Envoi en cours...
               </>
             ) : (
-              'Soumettre l\'Évaluation'
+              isEditMode ? 'Mettre à jour' : 'Soumettre l\'Évaluation'
             )}
           </button>
           <button
@@ -220,14 +218,6 @@ export default function EvaluationForm({
           </div>
         </div>
       )}
-
-      {/* Note importante */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-        <p className="text-xs text-amber-800">
-          <strong>📝 Note:</strong> Cette évaluation sera enregistrée localement. Assurez-vous que votre
-          navigateur n efface pas le localStorage.
-        </p>
-      </div>
     </div>
   )
 }

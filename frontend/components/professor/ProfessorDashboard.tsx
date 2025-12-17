@@ -9,6 +9,13 @@ import { MOCK_ASSIGNED_SOUTENANCES } from '@/data/mockProfessorData'
 import AssignedSoutenances from '@/components/professor/AssignedSoutenanceCard'
 import NotificationCenter from '@/components/professor/NotificationCenter'
 
+interface StatCardProps {
+  icon: React.ReactNode
+  label: string
+  value: number
+  color: 'blue' | 'yellow' | 'purple' | 'green'
+}
+
 export default function ProfessorDashboard() {
   const [soutenances, setSoutenances] = useState<AssignedSoutenance[]>([])
   const [stats, setStats] = useState<ProfessorStats>({
@@ -19,6 +26,15 @@ export default function ProfessorDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [showNotifications, setShowNotifications] = useState(false)
+
+  const calculateStats = (data: AssignedSoutenance[]) => {
+    return {
+      assignedCount: data.length,
+      evaluatedCount: data.filter((s) => s.status === 'evaluated').length,
+      pendingCount: data.filter((s) => s.status === 'pending').length,
+      scheduledCount: data.filter((s) => s.status === 'scheduled').length,
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,22 +52,12 @@ export default function ProfessorDashboard() {
         setSoutenances(data)
         
         // Calculer les stats
-        setStats({
-          assignedCount: data.length,
-          evaluatedCount: data.filter((s: any) => s.status === 'evaluated').length,
-          pendingCount: data.filter((s: any) => s.status === 'pending').length,
-          scheduledCount: data.filter((s: any) => s.status === 'scheduled').length,
-        })
+        setStats(calculateStats(data))
       } catch (error) {
         console.error('Failed to fetch soutenances:', error)
         // Fallback to mock data on error
         setSoutenances(MOCK_ASSIGNED_SOUTENANCES)
-        setStats({
-          assignedCount: MOCK_ASSIGNED_SOUTENANCES.length,
-          evaluatedCount: MOCK_ASSIGNED_SOUTENANCES.filter(s => s.status === 'evaluated').length,
-          pendingCount: MOCK_ASSIGNED_SOUTENANCES.filter(s => s.status === 'pending').length,
-          scheduledCount: MOCK_ASSIGNED_SOUTENANCES.filter(s => s.status === 'scheduled').length,
-        })
+        setStats(calculateStats(MOCK_ASSIGNED_SOUTENANCES))
       } finally {
         setLoading(false)
       }
@@ -127,8 +133,8 @@ export default function ProfessorDashboard() {
 }
 
 // Composant Stats Card réutilisable
-function StatCard({ icon, label, value, color }: any) {
-  const borderColors: any = {
+function StatCard({ icon, label, value, color }: StatCardProps) {
+  const borderColors = {
     blue: 'border-blue-500',
     yellow: 'border-yellow-500',
     purple: 'border-purple-500',

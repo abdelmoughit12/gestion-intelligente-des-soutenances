@@ -63,7 +63,7 @@ class ProfessorEvaluation(Base):
     
     comments = Column(
         Text,                  
-        nullable=False        
+        nullable=True        
     )
     
     submission_date = Column(
@@ -81,7 +81,6 @@ class ProfessorEvaluation(Base):
         ),
     )
     
-
     
     thesis_defense = relationship(
         "ThesisDefense",       

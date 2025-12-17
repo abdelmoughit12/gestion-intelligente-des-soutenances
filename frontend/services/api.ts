@@ -9,10 +9,8 @@ const api = axios.create({
   },
 })
 
-// Interceptor pour ajouter X-Professor-Id (pour test/développement)
 api.interceptors.request.use((config) => {
-  // Récupérer l'ID du prof depuis localStorage ou session
-  const professorId = localStorage.getItem('professorId') || '1' // Default: 1 pour test
+  const professorId = localStorage.getItem('professorId') || '1' //  pour test
   config.headers['X-Professor-Id'] = professorId
   return config
 })
@@ -67,9 +65,6 @@ export const getDashboardData = async () => {
   }
 }
 
-/////////////////////////////////////////
-
-// Ajouter ces fonctions
 export const getProfessorAssignedSoutenances = async () => {
   try {
     const response = await api.get('/api/professors/assigned-soutenances')
@@ -116,7 +111,7 @@ export const markNotificationAsRead = async (notificationId: number) => {
   }
 }
 
-// Évaluation des soutenances
+// evaluation des soutenances
 export const submitEvaluation = async (
   soutenanceId: number,
   evaluationData: { score: number; comments: string }

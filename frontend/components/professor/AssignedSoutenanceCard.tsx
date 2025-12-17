@@ -2,9 +2,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Filter, Download, Eye, Edit } from 'lucide-react'
+import { Search, Filter, Download, Eye, Edit, Loader2 } from 'lucide-react'
 import { AssignedSoutenance } from '@/types/soutenance'
 import SoutenanceDetailsModal from '@/components/professor/SoutenanceDetailsModal'
+import { downloadReport } from '@/services/api'
 
 interface Props {
   soutenances: AssignedSoutenance[]
@@ -15,7 +16,27 @@ export default function AssignedSoutenances({ soutenances, loading }: Props) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedSoutenance, setSelectedSoutenance] = useState<AssignedSoutenance | null>(null)
+  const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
+  const handleDownload = async (soutenanceId: number) => {
+    setDownloadingId(soutenanceId)
+    try {
+      const blob = await downloadReport(soutenanceId)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `report-soutenance-${soutenanceId}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode?.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to download report:', error)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+  
   const filtered = soutenances.filter(s => {
     const matchesSearch = 
       s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,20 +143,24 @@ export default function AssignedSoutenances({ soutenances, loading }: Props) {
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    {s.status !== 'evaluated' && (
-                      <button
-                        onClick={() => setSelectedSoutenance(s)}
-                        className="p-2 text-purple-600 hover:bg-purple-50 rounded transition"
-                        title="Evaluate"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                    )}
                     <button
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded transition"
+                      onClick={() => setSelectedSoutenance(s)}
+                      className="p-2 text-purple-600 hover:bg-purple-50 rounded transition"
+                      title={s.status === 'evaluated' ? "Modifier l'évaluation" : "Évaluer"}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDownload(s.id)}
+                      disabled={downloadingId === s.id}
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Download report"
                     >
-                      <Download className="h-4 w-4" />
+                      {downloadingId === s.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </button>
                   </td>
                 </tr>

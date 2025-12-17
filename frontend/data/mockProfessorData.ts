@@ -1,5 +1,5 @@
 // frontend/data/mockProfessorData.ts
-// Données de démonstration pour le dashboard professeur (sans API)
+// Données de démonstration pour le dashboard professeur Test frontend
 
 import { AssignedSoutenance, ProfessorNotification } from '@/types/soutenance'
 

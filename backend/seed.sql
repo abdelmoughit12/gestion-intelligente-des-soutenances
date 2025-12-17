@@ -48,12 +48,6 @@ VALUES
   (2, 1, 'Rapport reçu', 'Le rapport pour AI-Powered Cloud a été déposé', 'report', false, '2025-12-14 18:30:00')
 ON CONFLICT DO NOTHING;
 
--- 8) (Optionnel) Professor evaluations: none initially
--- INSERT INTO professor_evaluations (id, thesis_defense_id, professor_id, score, comments)
--- VALUES (1, 1, 1, 17.5, 'Très bonne soutenance.');
 
--- Note: If sequence values are used for serial/auto increment, adjust sequences after inserting explicit IDs:
--- SELECT setval(pg_get_serial_sequence('users','id'), (SELECT MAX(id) FROM users));
--- Repeat for reports, thesis_defenses, notifications as needed.
 
 COMMIT;

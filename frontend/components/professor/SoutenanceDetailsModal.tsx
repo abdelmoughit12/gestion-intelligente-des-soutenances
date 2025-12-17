@@ -34,7 +34,13 @@ export default function SoutenanceDetailsModal({ soutenance, onClose }: Props) {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: any = {
+    interface StatusConfig {
+      bg: string
+      text: string
+      label: string
+    }
+    
+    const statusConfig: Record<string, StatusConfig> = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
       scheduled: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Scheduled' },
       in_progress: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'In Progress' },
@@ -157,7 +163,7 @@ export default function SoutenanceDetailsModal({ soutenance, onClose }: Props) {
                 onClick={() => setShowEvaluation(true)}
                 className="flex items-center gap-2 flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium"
               >
-                ✍️ Évaluer cette Soutenance
+                {soutenance.evaluationScore !== undefined ? '✏️ Modifier l\'évaluation' : '✍️ Évaluer cette Soutenance'}
               </button>
               <button
                 onClick={handleDownloadReport}
@@ -167,10 +173,19 @@ export default function SoutenanceDetailsModal({ soutenance, onClose }: Props) {
                 <Download className="h-4 w-4" />
                 {loading ? 'Downloading...' : 'Download Report'}
               </button>
-              <button className="flex items-center gap-2 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+             <button
+                onClick={() =>
+                  window.open(
+                    `https://mail.google.com/mail/?view=cm&fs=1&to=${soutenance.studentEmail}&su=Soutenance: ${encodeURIComponent(soutenance.title)}`,
+                    '_blank'
+                  )
+                }
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"
+              >
                 <Mail className="h-4 w-4" />
-                Contact
+                Contacter l’étudiant
               </button>
+
             </div>
           ) : (
             <EvaluationForm

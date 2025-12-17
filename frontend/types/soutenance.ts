@@ -26,7 +26,6 @@ export interface RequestFormData {
 
 
 
-// Types basés sur l'entité Notification (Tâche 4.4)
 export interface Notification {
     id: number;
     message: string;
@@ -68,11 +67,10 @@ export interface ProfessorNotification extends Notification {
   studentName?: string
 }
 
-// Évaluation des soutenances
 export interface EvaluationSubmission {
   soutenanceId: number
   score: number
-  comments: string
+  comments?: string
   submittedAt: string
   submittedBy: string
 }
