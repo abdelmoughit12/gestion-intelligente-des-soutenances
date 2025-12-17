@@ -268,7 +268,7 @@ async def get_soutenance_detail(
             "studentEmail": soutenance_data.student_email,
             "domain": soutenance_data.domain,
             "status": soutenance_data.status,
-            "aiSummary": soutenance_data.ai_summary,
+aiSummary: soutenance_data.ai_summary,
             "aiSimilarityScore": soutenance_data.ai_similarity_score,
             "scheduledDate": soutenance_data.defense_date.isoformat() if soutenance_data.defense_date else None,
             "scheduledTime": str(soutenance_data.defense_time) if soutenance_data.defense_time else None,

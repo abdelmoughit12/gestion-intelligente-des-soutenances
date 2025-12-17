@@ -1,30 +1,27 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
-# Import Base, engine, and SessionLocal from the database session module
-from .db.session import Base, engine, SessionLocal
+from .db.session import Base, engine
 from . import models
 
-# Import les routers d'API
-from .api import professor, student
+# Import all API routers
+from .api import professor, student, thesis_defense, stats
 
-# This line will create the database tables if they don't exist
-# as soon as the application starts.
-# When we define our models, they will inherit from Base, and so
-# they will be registered with this metadata.
-# Note: For production, you would typically use a migration tool like Alembic.
+# Create database tables on startup
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="FastAPI Application with PostgreSQL")
+app = FastAPI(title="Soutenance Manager API")
 
 # ===== CORS MIDDLEWARE =====
-# Permet au frontend (localhost:3000) d'appeler le backend (localhost:8000)
+# Combine origins from both branches for flexibility
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3001", # from dev branch
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ],
@@ -33,23 +30,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ===== STATIC FILE SERVING =====
+# Serve reports from the storage/reports directory, consistent with other modules
+REPORTS_DIR = Path(__file__).resolve().parent / "storage" / "reports"
+REPORTS_DIR.mkdir(exist_ok=True, parents=True)
+app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 
-# ===== ENREGISTRER LES ROUTERS =====
-# Un router regroupe plusieurs endpoints
-# Include = ajouter tous les endpoints du router à l'app
 
+# ===== REGISTER ROUTERS =====
+# Include all routers. Prefixes are defined within each router file.
 app.include_router(professor.router)
 app.include_router(student.router)
-
-# Dependency function to get a database session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+app.include_router(thesis_defense.router)
+app.include_router(stats.router)
 
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the FastAPI application!"}
+    return {"message": "Welcome to the Soutenance Manager API!"}

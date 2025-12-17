@@ -1,6 +1,13 @@
- export type SoutenanceStatus = 'pending' | 'accepted' | 'refused'
+export type SoutenanceStatus = 'pending' | 'accepted' | 'refused'
 
- export type Domain = 'Web' | 'AI' | 'IoT' | 'Mobile' | 'Security' | 'Data Science' | 'Other'
+export type Domain = 'Web' | 'AI' | 'IoT' | 'Mobile' | 'Security' | 'Data Science' | 'Other'
+
+export type JuryRole = 'president' | 'secretary' | 'examiner' | 'member';
+
+export interface JuryMember {
+  professorId: string;
+  role: JuryRole;
+}
 
 export interface SoutenanceRequest {
   id: string
@@ -14,7 +21,7 @@ export interface SoutenanceRequest {
   updatedAt?: string
   scheduledDate?: string
   scheduledTime?: string
-  jury?: string[]
+  jury?: JuryMember[]
 }
 
 export interface RequestFormData {
@@ -22,9 +29,6 @@ export interface RequestFormData {
   domain: Domain
   pdfFile: File | null
 }
-
-
-
 
 export interface Notification {
     id: number;

@@ -102,15 +102,15 @@ export default function PDFUpload({ onFileSelect, selectedFile }: PDFUploadProps
               className={`h-12 w-12 ${isDragActive ? 'text-primary-600' : 'text-gray-400'}`}
             />
             <div>
-              <p className="text-sm font-medium text-gray-700">
+              <div className="text-sm font-medium text-gray-700">
                 {isDragActive ? (
                   <span className="text-primary-600">Drop the PDF here</span>
                 ) : (
-                  <>
+                  <div>
                     <span className="text-primary-600">Click to upload</span> or drag and drop
-                  </>
+                  </div>
                 )}
-              </p>
+              </div>
               <p className="text-xs text-gray-500 mt-1">PDF only (Max. 10MB)</p>
             </div>
           </div>
