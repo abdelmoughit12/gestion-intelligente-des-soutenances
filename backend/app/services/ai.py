@@ -105,9 +105,13 @@ def extract_pdf_text(pdf_path: str) -> str:
 
 def summarize(title: str, pdf_path: str | None = None) -> str:
     """Generate English summary from PDF content."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     fallback = f"Auto-generated summary placeholder for '{title}'. AI module will replace this text."
     model = _get_model()
     if not model:
+        logger.warning(f"⚠️ GEMINI UNAVAILABLE - Using placeholder summary")
         return fallback
     
     # Extract PDF content if path provided
@@ -129,7 +133,12 @@ def summarize(title: str, pdf_path: str | None = None) -> str:
     )
     
     result = _generate_with_fallback(model, prompt)
-    return result if result else fallback
+    if result:
+        logger.info(f"✅ GEMINI SUCCESS - Generated summary ({len(result)} chars)")
+        return result
+    else:
+        logger.warning(f"⚠️ GEMINI FAILED - Using placeholder summary")
+        return fallback
 
 
 def classify_domain(content: str, user_provided_domain: str, pdf_path: str | None = None) -> Dict[str, float]:
@@ -137,11 +146,16 @@ def classify_domain(content: str, user_provided_domain: str, pdf_path: str | Non
     
     Returns dict like: {'AI': 0.7, 'Mobile': 0.2, 'Security': 0.1}
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     domains = ["Web", "AI", "IoT", "Mobile", "Security", "Data Science", "Other"]
-    fallback = {user_provided_domain: 1.0}
+    # More realistic fallback: give claimed domain high confidence, but not 100%
+    fallback = {user_provided_domain: 0.85, "Other": 0.15}
     
     model = _get_model()
     if not model:
+        logger.warning(f"⚠️ GEMINI UNAVAILABLE - Using fallback domain classification: {fallback}")
         return fallback
     
     # Extract PDF content if available
@@ -174,10 +188,13 @@ def classify_domain(content: str, user_provided_domain: str, pdf_path: str | Non
             # Normalize and validate
             total = sum(result.values())
             if total > 0:
+                logger.info(f"✅ GEMINI SUCCESS - Domain classification: {result}")
                 return {k: round(v / total, 2) for k, v in result.items()}
-        except Exception:
+        except Exception as e:
+            logger.error(f"❌ GEMINI PARSE ERROR - Failed to parse domain result: {e}")
             pass
     
+    logger.warning(f"⚠️ GEMINI FAILED - Using fallback domain classification: {fallback}")
     return fallback
 
 
