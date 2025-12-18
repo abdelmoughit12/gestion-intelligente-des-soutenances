@@ -17,7 +17,7 @@ class JurySuggestion(BaseModel):
     name: str
     reason: str
 
-@router.get("/defenses/", response_model=List[schemas.ThesisDefense])
+@router.get("/", response_model=List[schemas.ThesisDefense])
 def read_thesis_defenses(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -130,7 +130,7 @@ def update_jury_member(
     return updated_jury_member
 
 
-@router.get("/defenses/{defense_id}/jury-suggestions", response_model=List[JurySuggestion])
+@router.get("/{defense_id}/jury-suggestions", response_model=List[JurySuggestion])
 def get_jury_suggestions(
     *,
     db: Session = Depends(get_db),
