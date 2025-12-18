@@ -2,11 +2,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { FileText, Plus, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import SoutenanceRequestForm from './SoutenanceRequestForm'
 import RequestHistory from './RequestHistory'
 import { SoutenanceRequest } from '@/types/soutenance'
 import { getStudentRequests, getDashboardData } from '@/services/api'
+import { logout } from '@/services/auth'
 
 export default function StudentDashboard() {
   const [showForm, setShowForm] = useState(false)
@@ -14,6 +16,7 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState<{ total: number; pending: number; accepted: number; refused: number; recent_requests?: SoutenanceRequest[]; upcoming_defenses?: SoutenanceRequest[] }>({ total: 0, pending: 0, accepted: 0, refused: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   // Fetch requests on component mount
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function StudentDashboard() {
         setError(null)
       } catch (err: any) {
         console.error('Failed to fetch requests:', err)
-        setError(err.message)
+        setError(err.message || 'Failed to load requests')
       } finally {
         setIsLoading(false)
       }
@@ -67,6 +70,22 @@ export default function StudentDashboard() {
     setShowForm(false)
   }
 
+  const handleLogout = () => {
+    logout()
+    router.push('/login')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -77,18 +96,33 @@ export default function StudentDashboard() {
               <FileText className="h-8 w-8 text-primary-600" />
               <h1 className="text-2xl font-bold text-gray-900">Student Dashboard</h1>
             </div>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              <Plus className="h-5 w-5" />
-              <span>New Request</span>
-            </button>
+            <div>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors mr-4"
+              >
+                <Plus className="h-5 w-5" />
+                <span>New Request</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
@@ -138,4 +172,3 @@ export default function StudentDashboard() {
     </div>
   )
 }
-

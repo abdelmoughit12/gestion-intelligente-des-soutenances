@@ -15,51 +15,14 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from typing import List, Optional
-from datetime import datetime
 from pydantic import BaseModel, Field
 import os
 
-from ..models import (
-    User, 
-    Professor, 
-    ThesisDefense, 
-    JuryMember, 
-    Student, 
-    Report,
-    Notification,
-    ProfessorEvaluation
-)
-from .. import crud, schemas
-from ..db.session import SessionLocal
+from .. import schemas, models, crud
+from ..db.session import get_db
+from ..dependencies import get_current_user, require_role
 
-router = APIRouter(prefix="/api/professors", tags=["professors"])
-
-
-def get_db():
-    
-    db = SessionLocal()
-    try:
-        yield db  
-    finally:
-        db.close()  
-
-def get_current_professor(
-    x_professor_id: int = Header(..., description="ID du professeur pour test")
-) -> dict:
-    
-    return {"id": x_professor_id, "role": "professor"}
-
-@router.get("/", response_model=List[schemas.Professor])
-def read_professors(
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100
-):
-    """
-    Retrieve all professors.
-    """
-    professors = crud.professor.get_multi(db, skip=skip, limit=limit)
-    return professors
+router = APIRouter(dependencies=[Depends(require_role("professor"))])
 
 class AssignedSoutenanceSchema(BaseModel):
    
@@ -82,12 +45,6 @@ class AssignedSoutenanceSchema(BaseModel):
 class EvaluationSubmitSchema(BaseModel):
     """
     Schema pour la soumission d'une évaluation.
-    
-    Utilisé par: EvaluationForm.tsx → POST /soutenances/{id}/evaluation
-    
-    Champs:
-    - score: Note de 0 à 20
-    - comments: Commentaires détaillés (minimum 10 caractères)
     """
     score: float = Field(..., ge=0, le=20, description="Score entre 0 et 20")
     comments: str = Field(..., description="Commentaires ")
@@ -103,15 +60,6 @@ class EvaluationResponseSchema(BaseModel):
 class NotificationSchema(BaseModel):
     """
     Schema pour les notifications.
-    
-    Utilisé par: Endpoint 5 → GET /notifications
-    
-    Champs:
-    - id: Identifiant unique de la notification
-    - title: Titre de la notification
-    - message: Contenu du message
-    - is_read: Si la notification a été lue ou non
-    - creation_date: Quand la notification a été créée
     """
     id: int
     title: str
@@ -128,58 +76,78 @@ class NotificationReadSchema(BaseModel):
     message: str
     notification: Optional[NotificationSchema] = None
 
+@router.get("/", response_model=List[schemas.Professor])
+def read_professors(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.user.User = Depends(get_current_user)
+):
+    """
+    Retrieve all professors.
+    """
+    professors = crud.crud_professor.get_multi(db, skip=skip, limit=limit)
+    return professors
+
+@router.get("/{professor_id}", response_model=schemas.Professor)
+def read_professor(
+    *,
+    db: Session = Depends(get_db),
+    professor_id: int,
+    current_user: models.user.User = Depends(get_current_user)
+):
+    professor = crud.crud_professor.get(db, id=professor_id)
+    if not professor:
+        raise HTTPException(status_code=404, detail="Professor not found")
+    return professor
+
 @router.get("/assigned-soutenances", response_model=List[AssignedSoutenanceSchema])
 async def get_assigned_soutenances(
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> List[dict]:
     
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(
             status_code=401, 
             detail="Professeur non authentifié"
         )
     
-
     try:
         soutenances_data = db.query(
-            ThesisDefense.id,
-            ThesisDefense.title,
-            ThesisDefense.status,
-            ThesisDefense.defense_date,
-            ThesisDefense.defense_time,
-
+            models.ThesisDefense.id,
+            models.ThesisDefense.title,
+            models.ThesisDefense.status,
+            models.ThesisDefense.defense_date,
+            models.ThesisDefense.defense_time,
             func.concat(
-                User.first_name,
+                models.User.first_name,
                 " ",
-                User.last_name
+                models.User.last_name
             ).label("student_name"),  
-            User.email.label("student_email"),  
-            Student.major.label("domain"),
-            
-            Report.ai_summary,
-            Report.ai_similarity_score,
-            
-            JuryMember.role.label("jury_role")
-            
+            models.User.email.label("student_email"),  
+            models.Student.major.label("domain"),
+            models.Report.ai_summary,
+            models.Report.ai_similarity_score,
+            models.JuryMember.role.label("jury_role")
         ).join(
-
-            JuryMember,
-            JuryMember.thesis_defense_id == ThesisDefense.id
+            models.JuryMember,
+            models.JuryMember.thesis_defense_id == models.ThesisDefense.id
         ).join(
-            Student,
-            Student.user_id == ThesisDefense.student_id
+            models.Student,
+            models.Student.user_id == models.ThesisDefense.student_id
         ).join(
-            User,
-            User.id == Student.user_id
+            models.User,
+            models.User.id == models.Student.user_id
         ).join(
-            Report,
-            Report.id == ThesisDefense.report_id,
+            models.Report,
+            models.Report.id == models.ThesisDefense.report_id,
             isouter=True
         ).filter(
-            JuryMember.professor_id == professor_id
+            models.JuryMember.professor_id == professor_id
         ).all()  
+
         result = []
         for row in soutenances_data:
             result.append({
@@ -205,23 +173,22 @@ async def get_assigned_soutenances(
             detail="Erreur serveur: impossible de récupérer les soutenances"
         )
 
-
-
 @router.get("/soutenances/{defense_id}", response_model=AssignedSoutenanceSchema)
 async def get_soutenance_detail(
     defense_id: int,
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> dict:
     
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(status_code=401, detail="Professeur non authentifié")
+
     try:
-        access_check = db.query(JuryMember).filter(
+        access_check = db.query(models.JuryMember).filter(
             and_(
-                JuryMember.thesis_defense_id == defense_id,
-                JuryMember.professor_id == professor_id
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
             )
         ).first()
         
@@ -232,40 +199,40 @@ async def get_soutenance_detail(
             )
         
         soutenance_data = db.query(
-            ThesisDefense.id,
-            ThesisDefense.title,
-            ThesisDefense.status,
-            ThesisDefense.defense_date,
-            ThesisDefense.defense_time,
+            models.ThesisDefense.id,
+            models.ThesisDefense.title,
+            models.ThesisDefense.status,
+            models.ThesisDefense.defense_date,
+            models.ThesisDefense.defense_time,
             
             func.concat(
-                User.first_name,
+                models.User.first_name,
                 " ",
-                User.last_name
+                models.User.last_name
             ).label("student_name"),
-            User.email.label("student_email"),
-            Student.major.label("domain"),
+            models.User.email.label("student_email"),
+            models.Student.major.label("domain"),
             
-            Report.ai_summary,
-            Report.ai_similarity_score,
+            models.Report.ai_summary,
+            models.Report.ai_similarity_score,
             
-            JuryMember.role.label("jury_role")
+            models.JuryMember.role.label("jury_role")
             
         ).join(
-            JuryMember,
-            JuryMember.thesis_defense_id == ThesisDefense.id
+            models.JuryMember,
+            models.JuryMember.thesis_defense_id == models.ThesisDefense.id
         ).join(
-            Student,
-            Student.user_id == ThesisDefense.student_id
+            models.Student,
+            models.Student.user_id == models.ThesisDefense.student_id
         ).join(
-            User,
-            User.id == Student.user_id
+            models.User,
+            models.User.id == models.Student.user_id
         ).join(
-            Report,
-            Report.id == ThesisDefense.report_id,
+            models.Report,
+            models.Report.id == models.ThesisDefense.report_id,
             isouter=True
         ).filter(
-            ThesisDefense.id == defense_id
+            models.ThesisDefense.id == defense_id
         ).first()
         
         if not soutenance_data:
@@ -281,7 +248,7 @@ async def get_soutenance_detail(
             "studentEmail": soutenance_data.student_email,
             "domain": soutenance_data.domain,
             "status": soutenance_data.status,
-aiSummary: soutenance_data.ai_summary,
+            "aiSummary": soutenance_data.ai_summary,
             "aiSimilarityScore": soutenance_data.ai_similarity_score,
             "scheduledDate": soutenance_data.defense_date.isoformat() if soutenance_data.defense_date else None,
             "scheduledTime": str(soutenance_data.defense_time) if soutenance_data.defense_time else None,
@@ -301,19 +268,19 @@ aiSummary: soutenance_data.ai_summary,
 @router.get("/soutenances/{defense_id}/report/download")
 async def download_report(
     defense_id: int,
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(status_code=401, detail="Professeur non authentifié")
     
     try:
-        access_check = db.query(JuryMember).filter(
+        access_check = db.query(models.JuryMember).filter(
             and_(
-                JuryMember.thesis_defense_id == defense_id,
-                JuryMember.professor_id == professor_id
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
             )
         ).first()
         
@@ -323,8 +290,8 @@ async def download_report(
                 detail="Vous n'êtes pas assigné à cette soutenance"
             )
         
-        defense = db.query(ThesisDefense).filter(
-            ThesisDefense.id == defense_id
+        defense = db.query(models.ThesisDefense).filter(
+            models.ThesisDefense.id == defense_id
         ).first()
         
         if not defense:
@@ -339,8 +306,8 @@ async def download_report(
                 detail="Aucun rapport disponible pour cette soutenance"
             )
         
-        report = db.query(Report).filter(
-            Report.id == defense.report_id
+        report = db.query(models.Report).filter(
+            models.Report.id == defense.report_id
         ).first()
         
         if not report:
@@ -379,19 +346,19 @@ async def download_report(
 async def submit_evaluation(
     defense_id: int,
     evaluation_data: EvaluationSubmitSchema,
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> dict:
     
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(status_code=401, detail="Professeur non authentifié")
     
     try:
-        access_check = db.query(JuryMember).filter(
+        access_check = db.query(models.JuryMember).filter(
             and_(
-                JuryMember.thesis_defense_id == defense_id,
-                JuryMember.professor_id == professor_id
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
             )
         ).first()
         
@@ -401,8 +368,8 @@ async def submit_evaluation(
                 detail="Vous n'êtes pas assigné à cette soutenance"
             )
         
-        defense = db.query(ThesisDefense).filter(
-            ThesisDefense.id == defense_id
+        defense = db.query(models.ThesisDefense).filter(
+            models.ThesisDefense.id == defense_id
         ).first()
         
         if not defense:
@@ -411,10 +378,10 @@ async def submit_evaluation(
                 detail="Soutenance non trouvée"
             )
         
-        existing_evaluation = db.query(ProfessorEvaluation).filter(
+        existing_evaluation = db.query(models.ProfessorEvaluation).filter(
             and_(
-                ProfessorEvaluation.thesis_defense_id == defense_id,
-                ProfessorEvaluation.professor_id == professor_id
+                models.ProfessorEvaluation.thesis_defense_id == defense_id,
+                models.ProfessorEvaluation.professor_id == professor_id
             )
         ).first()
         
@@ -442,7 +409,7 @@ async def submit_evaluation(
         else:
             print(f"✍️  Création d'une nouvelle évaluation")
             
-            new_evaluation = ProfessorEvaluation(
+            new_evaluation = models.ProfessorEvaluation(
                 thesis_defense_id=defense_id,
                 professor_id=professor_id,
                 score=evaluation_data.score,
@@ -479,10 +446,10 @@ async def submit_evaluation(
 
 @router.get("/notifications", response_model=List[NotificationSchema])
 async def get_notifications(
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> List[dict]: 
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(
             status_code=401,
@@ -490,10 +457,10 @@ async def get_notifications(
         )
     
     try:
-        notifications = db.query(Notification).filter(
-            Notification.user_id == professor_id
+        notifications = db.query(models.Notification).filter(
+            models.Notification.user_id == professor_id
         ).order_by(
-            Notification.creation_date.desc()  
+            models.Notification.creation_date.desc()  
         ).all()
         
         return notifications
@@ -509,11 +476,11 @@ async def get_notifications(
 @router.patch("/notifications/{notification_id}/read", response_model=NotificationReadSchema)
 async def mark_notification_read(
     notification_id: int,
-    current_user: dict = Depends(get_current_professor),
+    current_user: models.user.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> dict:
  
-    professor_id = current_user.get("id")
+    professor_id = current_user.id
     if not professor_id:
         raise HTTPException(
             status_code=401,
@@ -521,8 +488,8 @@ async def mark_notification_read(
         )
     
     try:
-        notification = db.query(Notification).filter(
-            Notification.id == notification_id
+        notification = db.query(models.Notification).filter(
+            models.Notification.id == notification_id
         ).first()
         
         if not notification:
@@ -554,7 +521,7 @@ async def mark_notification_read(
     
     except Exception as e:
         print(f"❌ Erreur lors du marquage de notification: {str(e)}")
-        db.rollback()  # Annuler tout changement en cas d'erreur
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail="Erreur serveur lors du marquage de notification"

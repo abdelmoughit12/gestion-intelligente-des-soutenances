@@ -1,15 +1,29 @@
-import axios from 'axios'
+import axios from 'axios';
+import { getToken } from './auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-})
+});
 
-// Interceptor from HEAD to add professor ID for testing
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor to add professor ID for testing
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const professorId = localStorage.getItem('professorId') || '1' // for testing
@@ -18,7 +32,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Helper function from dev to construct file URLs
+// Helper function to construct file URLs
 const toFileUrl = (maybePath?: string | null) => {
   if (!maybePath) return ''
   if (maybePath.startsWith('http://') || maybePath.startsWith('https://')) return maybePath
@@ -44,7 +58,7 @@ export const submitSoutenanceRequest = async (
   formData: FormData
 ): Promise<SubmitRequestResponse> => {
   try {
-    const response = await api.post('/api/students/soutenance-requests/', formData, {
+    const response = await api.post('/api/v1/students/soutenance-requests', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -70,7 +84,8 @@ export const submitSoutenanceRequest = async (
 
 export const getStudentRequests = async () => {
   try {
-    const response = await api.get('/api/students/soutenance-requests/')
+    const response = await api.get('/api/v1/students/soutenance-requests')
+    // Transform backend data to match frontend types
     return response.data.map((defense: any) => ({
       id: defense.id.toString(),
       title: defense.title,
@@ -106,7 +121,7 @@ export interface StatsData {
 
 export const getDashboardData = async (): Promise<StatsData> => {
   try {
-    const response = await api.get('/api/stats/');
+    const response = await api.get('/api/v1/stats/');
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -116,23 +131,9 @@ export const getDashboardData = async (): Promise<StatsData> => {
   }
 }
 
-export const getDefenses = async () => {
-  try {
-    // Standardizing path: removing /v1
-    const response = await api.get('/api/defenses/')
-    return response.data
-  } catch (error: any) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch defenses')
-    }
-    throw new Error('Network error. Please check your connection.')
-  }
-}
-
-// Functions from HEAD branch
 export const getProfessorAssignedSoutenances = async () => {
   try {
-    const response = await api.get('/api/professors/assigned-soutenances/')
+    const response = await api.get('/api/v1/professors/assigned-soutenances/')
     return response.data
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || 'Failed to fetch assigned soutenances')
@@ -141,7 +142,7 @@ export const getProfessorAssignedSoutenances = async () => {
 
 export const getSoutenanceDetail = async (defenseId: number) => {
   try {
-    const response = await api.get(`/api/professors/soutenances/${defenseId}/`)
+    const response = await api.get(`/api/v1/professors/soutenances/${defenseId}/`)
     return response.data
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || 'Failed to fetch soutenance detail')
@@ -150,7 +151,7 @@ export const getSoutenanceDetail = async (defenseId: number) => {
 
 export const downloadReport = async (defenseId: number) => {
   try {
-    const response = await api.get(`/api/professors/soutenances/${defenseId}/report/download/`, {
+    const response = await api.get(`/api/v1/professors/soutenances/${defenseId}/report/download/`, {
       responseType: 'blob'
     })
     return response.data
@@ -161,7 +162,7 @@ export const downloadReport = async (defenseId: number) => {
 
 export const getProfessorNotifications = async () => {
   try {
-    const response = await api.get('/api/professors/notifications/')
+    const response = await api.get('/api/v1/professors/notifications/')
     return response.data
   } catch (error: any) {
     throw new Error('Failed to fetch notifications')
@@ -170,7 +171,7 @@ export const getProfessorNotifications = async () => {
 
 export const markNotificationAsRead = async (notificationId: number) => {
   try {
-    await api.patch(`/api/professors/notifications/${notificationId}/read/`)
+    await api.patch(`/api/v1/professors/notifications/${notificationId}/read/`)
   } catch (error: any) {
     throw new Error('Failed to mark notification as read')
   }
@@ -182,7 +183,7 @@ export const submitEvaluation = async (
 ) => {
   try {
     const response = await api.post(
-      `/api/professors/soutenances/${soutenanceId}/evaluation/`,
+      `/api/v1/professors/soutenances/${soutenanceId}/evaluation/`,
       evaluationData
     )
     return response.data
@@ -193,18 +194,16 @@ export const submitEvaluation = async (
 
 export const getEvaluations = async () => {
   try {
-    const response = await api.get('/api/professors/evaluations/')
+    const response = await api.get('/api/v1/professors/evaluations/')
     return response.data
   } catch (error: any) {
     throw new Error('Failed to fetch evaluations')
   }
 }
 
-// Functions from dev branch (with paths standardized)
 export const updateDefenseStatus = async (id: number, status: 'accepted' | 'declined') => {
   try {
-    // Standardizing path: removing /v1
-    const response = await api.patch(`/api/defenses/${id}/`, { status });
+    const response = await api.patch(`/api/v1/thesis-defenses/${id}/`, { status });
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -228,8 +227,7 @@ export interface Professor {
 
 export const getProfessors = async (): Promise<Professor[]> => {
   try {
-    // Standardizing path: removing /v1
-    const response = await api.get('/api/professors/');
+    const response = await api.get('/api/v1/professors/');
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -247,7 +245,7 @@ export interface JurySuggestion {
 
 export const getJurySuggestions = async (defenseId: number): Promise<JurySuggestion[]> => {
   try {
-    const response = await api.get(`/api/defenses/${defenseId}/jury-suggestions`);
+    const response = await api.get(`/api/v1/thesis-defenses/${defenseId}/jury-suggestions`);
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -265,8 +263,7 @@ export interface UpdateDefensePayload {
 
 export const updateDefenseDetails = async (id: number, payload: UpdateDefensePayload) => {
   try {
-    // Standardizing path: removing /v1
-    const response = await api.patch(`/api/defenses/${id}/`, payload);
+    const response = await api.patch(`/api/v1/thesis-defenses/${id}/`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response) {
@@ -289,8 +286,7 @@ export const assignJuryMember = async (defenseId: number, professorId: number, r
     role: role,
   };
   try {
-    // Standardizing path: removing /v1
-    const response = await api.post(`/api/defenses/${defenseId}/jury/`, payload);
+    const response = await api.post(`/api/v1/thesis-defenses/${defenseId}/jury/`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response) {
