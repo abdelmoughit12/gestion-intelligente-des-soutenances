@@ -11,6 +11,7 @@ from .. import schemas, models
 from .. import crud
 from ..services import ai
 from ..db.session import get_db
+from ..models import ThesisDefense, Report, Student
 
 # Use the same router and db dependency pattern as professor.py
 router = APIRouter(prefix="/api/students", tags=["students"])
