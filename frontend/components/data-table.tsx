@@ -69,7 +69,7 @@ export const studentUserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   id: z.number(),
-  cni: z.string(),
+  cni: z.string().nullable(),
   role: z.string(),
 });
 
@@ -82,9 +82,9 @@ export const studentSchema = z.object({
 
 export const reportSchema = z.object({
   file_name: z.string(),
-  ai_summary: z.string(),
-  ai_domain: z.string(),
-  ai_similarity_score: z.number(),
+  ai_summary: z.string().nullable(),
+  ai_domain: z.string().nullable(),
+  ai_similarity_score: z.number().nullable(),
   id: z.number(),
   student_id: z.number(),
   submission_date: z.string(),
@@ -98,7 +98,8 @@ export const schema = z.object({
   defense_date: z.string().nullable(),
   defense_time: z.string().nullable(),
   student: studentSchema,
-  report: reportSchema,
+  report: reportSchema.nullable(),
+  jury_members: z.array(z.any()).optional(),
 });
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
@@ -245,7 +246,7 @@ export function DataTable({
     pageIndex: 0,
     pageSize: 10,
   });
-  
+
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
@@ -323,51 +324,51 @@ export function DataTable({
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
         <div className="overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      );
-                    })}
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
