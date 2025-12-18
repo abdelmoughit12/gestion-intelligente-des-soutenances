@@ -1,12 +1,20 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from .. import schemas, models
 from .. import crud
 from ..db.session import get_db
+from ..services import jury_ai
 
 router = APIRouter(prefix="/api")
+
+# Response model for jury suggestions
+class JurySuggestion(BaseModel):
+    professor_id: int
+    name: str
+    reason: str
 
 @router.get("/defenses/", response_model=List[schemas.ThesisDefense])
 def read_thesis_defenses(
@@ -115,3 +123,51 @@ def update_jury_member(
 
     updated_jury_member = crud.jury_member.update(db=db, db_obj=jury_member, obj_in=jury_member_in)
     return updated_jury_member
+
+
+@router.get("/defenses/{defense_id}/jury-suggestions", response_model=List[JurySuggestion])
+def get_jury_suggestions(
+    *,
+    db: Session = Depends(get_db),
+    defense_id: int,
+    num_suggestions: int = 3
+):
+    """
+    Get AI-powered jury member suggestions for a thesis defense based on domain expertise.
+    """
+    # Get the thesis defense
+    defense = crud.thesis_defense.get(db=db, id=defense_id)
+    if not defense:
+        raise HTTPException(status_code=404, detail="Thesis defense not found")
+    
+    # Get available professors
+    professors = crud.professor.get_multi(db=db)
+    available_profs = [
+        {
+            "id": p.user_id,
+            "name": f"{p.user.first_name} {p.user.last_name}" if p.user else f"Professor {p.user_id}",
+            "specialty": p.specialty or "General"
+        }
+        for p in professors
+    ]
+    
+    # Get thesis domain from report
+    thesis_domain = "General"
+    thesis_title = defense.title or "Untitled Thesis"
+    
+    if defense.report and defense.report.ai_domain:
+        try:
+            import json
+            thesis_domain = json.loads(defense.report.ai_domain)
+        except:
+            thesis_domain = defense.report.ai_domain
+    
+    # Get AI suggestions
+    suggestions = jury_ai.suggest_jury_members(
+        thesis_title=thesis_title,
+        thesis_domain=thesis_domain,
+        available_professors=available_profs,
+        num_suggestions=num_suggestions
+    )
+    
+    return suggestions

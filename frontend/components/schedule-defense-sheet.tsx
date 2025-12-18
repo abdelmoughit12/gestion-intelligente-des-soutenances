@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getProfessors, Professor, updateDefenseDetails, assignJuryMember } from "@/services/api"; // Import Professor and getProfessors
+import { getProfessors, Professor, updateDefenseDetails, assignJuryMember, getJurySuggestions, JurySuggestion } from "@/services/api"; // Import Professor and getProfessors
 
 // Define the enum for JuryRole
 const JuryRole = z.enum(["president", "secretary", "examiner", "member"]);
@@ -54,6 +54,8 @@ export function ScheduleDefenseSheet({
   const [professorsLoading, setProfessorsLoading] = React.useState(true);
   const [professorsError, setProfessorsError] = React.useState<string | null>(null);
   const [isJuryPopoverOpen, setJuryPopoverOpen] = React.useState(false);
+  const [jurySuggestions, setJurySuggestions] = React.useState<JurySuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = React.useState(true);
 
   const toggleProfessor = (professorId: number) => {
     const currentSelection = form.getValues("jury_members");
@@ -79,6 +81,21 @@ export function ScheduleDefenseSheet({
     }
     loadProfessors();
   }, []);
+
+  React.useEffect(() => {
+    async function loadJurySuggestions() {
+      if (!defense?.id) return;
+      try {
+        const suggestions = await getJurySuggestions(defense.id);
+        setJurySuggestions(suggestions);
+      } catch (e: any) {
+        console.error("Failed to load jury suggestions:", e.message);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }
+    loadJurySuggestions();
+  }, [defense?.id]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     toast.info("Scheduling defense and assigning jury...", { id: "schedule-defense" });
@@ -178,6 +195,39 @@ export function ScheduleDefenseSheet({
           {...form.register("defense_time")}
         />
       </div>
+
+      {/* AI Jury Suggestions */}
+      {!suggestionsLoading && jurySuggestions.length > 0 && (
+        <div className="col-span-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-semibold text-blue-900">🤖 AI Jury Suggestions</span>
+          </div>
+          <div className="space-y-2">
+            {jurySuggestions.map((suggestion) => (
+              <div key={suggestion.professor_id} className="flex items-center justify-between rounded border border-blue-200 bg-white p-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{suggestion.name}</p>
+                  <p className="text-xs text-gray-600">{suggestion.reason}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const alreadySelected = juryMembers?.some(m => m.professorId === suggestion.professor_id);
+                    if (!alreadySelected) {
+                      toggleProfessor(suggestion.professor_id);
+                    }
+                  }}
+                  disabled={juryMembers?.some(m => m.professorId === suggestion.professor_id)}
+                >
+                  {juryMembers?.some(m => m.professorId === suggestion.professor_id) ? "Added" : "Add"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Professor assignment */}
       <div className="grid grid-cols-4 items-center gap-4">

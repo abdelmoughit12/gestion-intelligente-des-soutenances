@@ -9,11 +9,11 @@ import ProfessorDashboard from '@/components/professor/ProfessorDashboard'
 export default function ProfessorDashboardPage() {
   return (
     <SidebarProvider>
-      <UnifiedSidebar 
-        role="professor" 
+      <UnifiedSidebar
+        role="professor"
         userName="Test Professor"
         userEmail="professor@example.com"
-        variant="inset" 
+        variant="inset"
       />
       <SidebarInset>
         <SiteHeader />

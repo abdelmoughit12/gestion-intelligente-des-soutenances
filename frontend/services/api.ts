@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
 const toFileUrl = (maybePath?: string | null) => {
   if (!maybePath) return ''
   if (maybePath.startsWith('http://') || maybePath.startsWith('https://')) return maybePath
-  
+
   // In our new setup, the backend serves files from /reports/filename.ext
   // So we just need to combine the base URL with that path.
   const normalized = maybePath.replace(/^\/+/, '')
@@ -234,6 +234,24 @@ export const getProfessors = async (): Promise<Professor[]> => {
   } catch (error: any) {
     if (error.response) {
       throw new Error(error.response.data.detail || 'Failed to fetch professors');
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
+
+export interface JurySuggestion {
+  professor_id: number;
+  name: string;
+  reason: string;
+}
+
+export const getJurySuggestions = async (defenseId: number): Promise<JurySuggestion[]> => {
+  try {
+    const response = await api.get(`/api/defenses/${defenseId}/jury-suggestions`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch jury suggestions');
     }
     throw new Error('Network error. Please check your connection.');
   }

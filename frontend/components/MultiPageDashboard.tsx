@@ -38,11 +38,11 @@ export default function MultiPageDashboard() {
 
     return (
         <SidebarProvider>
-            <UnifiedSidebar 
-                role="student" 
+            <UnifiedSidebar
+                role="student"
                 userName="Test Student"
                 userEmail="student@example.com"
-                variant="inset" 
+                variant="inset"
             />
             <SidebarInset>
                 <SiteHeader />

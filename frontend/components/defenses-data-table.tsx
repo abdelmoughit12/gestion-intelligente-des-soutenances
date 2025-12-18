@@ -93,7 +93,7 @@ export const studentUserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   id: z.number(),
-  cni: z.string(),
+  cni: z.string().nullable(),
   role: z.string(),
 });
 
@@ -106,9 +106,9 @@ export const studentSchema = z.object({
 
 export const reportSchema = z.object({
   file_name: z.string(),
-  ai_summary: z.string(),
-  ai_domain: z.string(),
-  ai_similarity_score: z.number(),
+  ai_summary: z.string().nullable(),
+  ai_domain: z.string().nullable(),
+  ai_similarity_score: z.number().nullable(),
   id: z.number(),
   student_id: z.number(),
   submission_date: z.string(),
@@ -119,21 +119,21 @@ const professorUserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   id: z.number(),
-  cni: z.string(),
+  cni: z.string().nullable(),
   role: z.string(),
 });
 
 const professorSchema = z.object({
-    specialty: z.string(),
-    user_id: z.number(),
-    user: professorUserSchema
+  specialty: z.string().nullable(),
+  user_id: z.number(),
+  user: professorUserSchema
 });
 
 const juryMemberSchema = z.object({
-    role: z.string(),
-    thesis_defense_id: z.number(),
-    professor_id: z.number(),
-    professor: professorSchema
+  role: z.string(),
+  thesis_defense_id: z.number(),
+  professor_id: z.number(),
+  professor: professorSchema
 });
 
 export const schema = z.object({
@@ -144,8 +144,8 @@ export const schema = z.object({
   defense_date: z.string().nullable(),
   defense_time: z.string().nullable(),
   student: studentSchema,
-  report: reportSchema,
-  jury_members: z.array(juryMemberSchema),
+  report: reportSchema.nullable(),
+  jury_members: z.array(juryMemberSchema).optional(),
 })
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
@@ -230,41 +230,41 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
                 <Label>Defense Date</Label>
                 <span>{`${defense.defense_date} ${defense.defense_time}`}</span>
               </div>
-              
+
               <Separator className="my-4" />
 
               <h4 className="text-lg font-semibold">Student Details</h4>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>Name</Label>
-                  <span>{`${defense.student.user.first_name} ${defense.student.user.last_name}`}</span>
+                <Label>Name</Label>
+                <span>{`${defense.student.user.first_name} ${defense.student.user.last_name}`}</span>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>Email</Label>
-                  <span>{defense.student.user.email}</span>
+                <Label>Email</Label>
+                <span>{defense.student.user.email}</span>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>Major</Label>
-                  <span>{defense.student.major}</span>
+                <Label>Major</Label>
+                <span>{defense.student.major}</span>
               </div>
 
               <Separator className="my-4" />
-              
+
               <h4 className="text-lg font-semibold">Report Analysis</h4>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>File</Label>
-                  <span>{defense.report.file_name}</span>
+                <Label>File</Label>
+                <span>{defense.report.file_name}</span>
               </div>
               <div className="grid grid-cols-1 gap-2">
-                  <Label>AI Summary</Label>
-                  <p className="text-sm text-muted-foreground">{defense.report.ai_summary}</p>
+                <Label>AI Summary</Label>
+                <p className="text-sm text-muted-foreground">{defense.report.ai_summary}</p>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>AI Domain</Label>
-                  <span>{defense.report.ai_domain}</span>
+                <Label>AI Domain</Label>
+                <span>{defense.report.ai_domain}</span>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
-                  <Label>Similarity Score</Label>
-                  <span>{defense.report.ai_similarity_score}</span>
+                <Label>Similarity Score</Label>
+                <span>{defense.report.ai_similarity_score}</span>
               </div>
 
               <Separator className="my-4" />
@@ -303,7 +303,7 @@ export function DefensesDataTable({
     pageIndex: 0,
     pageSize: 10,
   })
-  
+
   const table = useReactTable({
     data,
     columns,
@@ -334,7 +334,7 @@ export function DefensesDataTable({
       className="flex w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -375,51 +375,51 @@ export function DefensesDataTable({
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
         <div className="overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      )
-                    })}
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">

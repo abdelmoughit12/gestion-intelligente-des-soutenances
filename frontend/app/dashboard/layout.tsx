@@ -10,11 +10,11 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <UnifiedSidebar 
-        role="manager" 
+      <UnifiedSidebar
+        role="manager"
         userName="Manager"
         userEmail="manager@example.com"
-        variant="inset" 
+        variant="inset"
       />
       <SidebarInset>
         <SiteHeader />
