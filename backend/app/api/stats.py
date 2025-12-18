@@ -11,7 +11,8 @@ router = APIRouter()
 @router.get("/", response_model=schemas_stats.OverallStats)
 def read_overall_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _: bool = Depends(require_role("manager"))
 ):
     """
     Retrieve overall statistics for the application.
