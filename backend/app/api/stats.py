@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..schemas import stats as schemas_stats
 from ..crud import crud_stats
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, require_role
 from ..models.user import User
 
 router = APIRouter()
