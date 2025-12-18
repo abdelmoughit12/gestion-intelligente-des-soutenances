@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "student_id": 1,
+    "title": "Optimisation des reseaux neuronaux profonds",
+    "description": "Etude approfondie des methodes d'optimisation pour l'entrainement efficace des reseaux neuronaux profonds.",
+    "status": "accepted",
+    "defense_date": "2025-12-20",
+    "defense_time": "10:00:00",
+    "report_id": 1
+  }
+]

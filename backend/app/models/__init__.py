@@ -7,3 +7,4 @@ from .report import Report
 from .report_access import ReportAccess, ReportAction
 from .thesis_defense import ThesisDefense
 from .jury_member import JuryMember, JuryRole
+from .professor_evaluation import ProfessorEvaluation

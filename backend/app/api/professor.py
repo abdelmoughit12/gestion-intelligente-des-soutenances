@@ -1,15 +1,82 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+"""
+ API Professeur - Endpoints pour le Dashboard
+
+Ce fichier contient tous les endpoints que le frontend appelle:
+- GET /api/professors/assigned-soutenances     → Liste des soutenances assignées
+- GET /api/professors/soutenances/{id}         → Détails d'une soutenance
+- GET /api/professors/soutenances/{id}/report/download → Télécharger PDF
+- POST /api/professors/soutenances/{id}/evaluation    → Soumettre une évaluation
+- GET /api/professors/notifications             → Lister les notifications
+- PATCH /api/professors/notifications/{id}/read → Marquer comme lue
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+from typing import List, Optional
+from pydantic import BaseModel, Field
+import os
 
-from .. import schemas, models
-from .. import crud
+from .. import schemas, models, crud
 from ..db.session import get_db
-from ..dependencies import get_current_user, require_professor
+from ..dependencies import get_current_user, require_role
 
-router = APIRouter(dependencies=[Depends(require_professor)])
+router = APIRouter(dependencies=[Depends(require_role("professor"))])
 
-@router.get("/professors/", response_model=List[schemas.Professor])
+class AssignedSoutenanceSchema(BaseModel):
+   
+    id: int
+    title: str
+    studentName: str
+    studentEmail: str
+    domain: str
+    status: str
+    aiSummary: Optional[str] = None  
+    aiSimilarityScore: Optional[float] = None
+    scheduledDate: Optional[str] = None  
+    scheduledTime: Optional[str] = None  
+    juryRole: str
+    
+    class Config:
+        from_attributes = True  
+
+
+class EvaluationSubmitSchema(BaseModel):
+    """
+    Schema pour la soumission d'une évaluation.
+    """
+    score: float = Field(..., ge=0, le=20, description="Score entre 0 et 20")
+    comments: str = Field(..., description="Commentaires ")
+
+
+class EvaluationResponseSchema(BaseModel):
+    """Schema de réponse après soumission d'une évaluation."""
+    success: bool
+    message: str
+    evaluation: Optional[dict] = None
+
+
+class NotificationSchema(BaseModel):
+    """
+    Schema pour les notifications.
+    """
+    id: int
+    title: str
+    message: str
+    is_read: bool
+    creation_date: str  # ISO format datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class NotificationReadSchema(BaseModel):
+    success: bool
+    message: str
+    notification: Optional[NotificationSchema] = None
+
+@router.get("/", response_model=List[schemas.Professor])
 def read_professors(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -19,20 +86,443 @@ def read_professors(
     """
     Retrieve all professors.
     """
-    professors = crud.professor.get_multi(db, skip=skip, limit=limit)
+    professors = crud.crud_professor.get_multi(db, skip=skip, limit=limit)
     return professors
 
-@router.get("/professors/{professor_id}", response_model=schemas.Professor)
+@router.get("/{professor_id}", response_model=schemas.Professor)
 def read_professor(
     *,
     db: Session = Depends(get_db),
     professor_id: int,
     current_user: models.user.User = Depends(get_current_user)
 ):
-    """
-    Get a specific professor by ID.
-    """
-    professor = crud.professor.get(db=db, id=professor_id)
+    professor = crud.crud_professor.get(db, id=professor_id)
     if not professor:
         raise HTTPException(status_code=404, detail="Professor not found")
     return professor
+
+@router.get("/assigned-soutenances", response_model=List[AssignedSoutenanceSchema])
+async def get_assigned_soutenances(
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> List[dict]:
+    
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(
+            status_code=401, 
+            detail="Professeur non authentifié"
+        )
+    
+    try:
+        soutenances_data = db.query(
+            models.ThesisDefense.id,
+            models.ThesisDefense.title,
+            models.ThesisDefense.status,
+            models.ThesisDefense.defense_date,
+            models.ThesisDefense.defense_time,
+            func.concat(
+                models.User.first_name,
+                " ",
+                models.User.last_name
+            ).label("student_name"),  
+            models.User.email.label("student_email"),  
+            models.Student.major.label("domain"),
+            models.Report.ai_summary,
+            models.Report.ai_similarity_score,
+            models.JuryMember.role.label("jury_role")
+        ).join(
+            models.JuryMember,
+            models.JuryMember.thesis_defense_id == models.ThesisDefense.id
+        ).join(
+            models.Student,
+            models.Student.user_id == models.ThesisDefense.student_id
+        ).join(
+            models.User,
+            models.User.id == models.Student.user_id
+        ).join(
+            models.Report,
+            models.Report.id == models.ThesisDefense.report_id,
+            isouter=True
+        ).filter(
+            models.JuryMember.professor_id == professor_id
+        ).all()  
+
+        result = []
+        for row in soutenances_data:
+            result.append({
+                "id": row.id,
+                "title": row.title,
+                "studentName": row.student_name,
+                "studentEmail": row.student_email,
+                "domain": row.domain,
+                "status": row.status,
+                "aiSummary": row.ai_summary,
+                "aiSimilarityScore": row.ai_similarity_score,
+                "scheduledDate": row.defense_date.isoformat() if row.defense_date else None,
+                "scheduledTime": str(row.defense_time) if row.defense_time else None,
+                "juryRole": row.jury_role.value if row.jury_role else None
+            })
+        
+        return result
+        
+    except Exception as e:
+        print(f" Erreur lors de la récupération des soutenances: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur: impossible de récupérer les soutenances"
+        )
+
+@router.get("/soutenances/{defense_id}", response_model=AssignedSoutenanceSchema)
+async def get_soutenance_detail(
+    defense_id: int,
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> dict:
+    
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(status_code=401, detail="Professeur non authentifié")
+
+    try:
+        access_check = db.query(models.JuryMember).filter(
+            and_(
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
+            )
+        ).first()
+        
+        if not access_check:
+            raise HTTPException(
+                status_code=403,
+                detail="Vous n'êtes pas assigné à cette soutenance"
+            )
+        
+        soutenance_data = db.query(
+            models.ThesisDefense.id,
+            models.ThesisDefense.title,
+            models.ThesisDefense.status,
+            models.ThesisDefense.defense_date,
+            models.ThesisDefense.defense_time,
+            
+            func.concat(
+                models.User.first_name,
+                " ",
+                models.User.last_name
+            ).label("student_name"),
+            models.User.email.label("student_email"),
+            models.Student.major.label("domain"),
+            
+            models.Report.ai_summary,
+            models.Report.ai_similarity_score,
+            
+            models.JuryMember.role.label("jury_role")
+            
+        ).join(
+            models.JuryMember,
+            models.JuryMember.thesis_defense_id == models.ThesisDefense.id
+        ).join(
+            models.Student,
+            models.Student.user_id == models.ThesisDefense.student_id
+        ).join(
+            models.User,
+            models.User.id == models.Student.user_id
+        ).join(
+            models.Report,
+            models.Report.id == models.ThesisDefense.report_id,
+            isouter=True
+        ).filter(
+            models.ThesisDefense.id == defense_id
+        ).first()
+        
+        if not soutenance_data:
+            raise HTTPException(
+                status_code=404,
+                detail="Soutenance non trouvée"
+            )
+        
+        return {
+            "id": soutenance_data.id,
+            "title": soutenance_data.title,
+            "studentName": soutenance_data.student_name,
+            "studentEmail": soutenance_data.student_email,
+            "domain": soutenance_data.domain,
+            "status": soutenance_data.status,
+            "aiSummary": soutenance_data.ai_summary,
+            "aiSimilarityScore": soutenance_data.ai_similarity_score,
+            "scheduledDate": soutenance_data.defense_date.isoformat() if soutenance_data.defense_date else None,
+            "scheduledTime": str(soutenance_data.defense_time) if soutenance_data.defense_time else None,
+            "juryRole": soutenance_data.jury_role.value if soutenance_data.jury_role else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la récupération du détail: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur"
+        )
+
+
+@router.get("/soutenances/{defense_id}/report/download")
+async def download_report(
+    defense_id: int,
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(status_code=401, detail="Professeur non authentifié")
+    
+    try:
+        access_check = db.query(models.JuryMember).filter(
+            and_(
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
+            )
+        ).first()
+        
+        if not access_check:
+            raise HTTPException(
+                status_code=403,
+                detail="Vous n'êtes pas assigné à cette soutenance"
+            )
+        
+        defense = db.query(models.ThesisDefense).filter(
+            models.ThesisDefense.id == defense_id
+        ).first()
+        
+        if not defense:
+            raise HTTPException(
+                status_code=404,
+                detail="Soutenance non trouvée"
+            )
+        
+        if not defense.report_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Aucun rapport disponible pour cette soutenance"
+            )
+        
+        report = db.query(models.Report).filter(
+            models.Report.id == defense.report_id
+        ).first()
+        
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Rapport non trouvé"
+            )
+        
+        report_path = os.path.join("storage", "reports", report.file_name)
+        
+        if not os.path.exists(report_path):
+            print(f"⚠️  Fichier non trouvé: {report_path}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Fichier du rapport non trouvé: {report.file_name}"
+            )
+        
+        return FileResponse(
+            path=report_path,
+            media_type="application/pdf",
+            filename=f"report-defense-{defense_id}.pdf"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors du téléchargement: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur lors du téléchargement"
+        )
+
+
+
+@router.post("/soutenances/{defense_id}/evaluation", response_model=EvaluationResponseSchema)
+async def submit_evaluation(
+    defense_id: int,
+    evaluation_data: EvaluationSubmitSchema,
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> dict:
+    
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(status_code=401, detail="Professeur non authentifié")
+    
+    try:
+        access_check = db.query(models.JuryMember).filter(
+            and_(
+                models.JuryMember.thesis_defense_id == defense_id,
+                models.JuryMember.professor_id == professor_id
+            )
+        ).first()
+        
+        if not access_check:
+            raise HTTPException(
+                status_code=403,
+                detail="Vous n'êtes pas assigné à cette soutenance"
+            )
+        
+        defense = db.query(models.ThesisDefense).filter(
+            models.ThesisDefense.id == defense_id
+        ).first()
+        
+        if not defense:
+            raise HTTPException(
+                status_code=404,
+                detail="Soutenance non trouvée"
+            )
+        
+        existing_evaluation = db.query(models.ProfessorEvaluation).filter(
+            and_(
+                models.ProfessorEvaluation.thesis_defense_id == defense_id,
+                models.ProfessorEvaluation.professor_id == professor_id
+            )
+        ).first()
+        
+        
+        if existing_evaluation:
+            print(f"📝 Mise à jour de l'évaluation {existing_evaluation.id}")
+            
+            existing_evaluation.score = evaluation_data.score
+            existing_evaluation.comments = evaluation_data.comments
+            
+            defense.status = 'evaluated'
+            
+            db.commit()
+            
+            return {
+                "success": True,
+                "message": "Évaluation mise à jour avec succès",
+                "evaluation": {
+                    "soutenanceId": defense_id,
+                    "score": existing_evaluation.score,
+                    "comments": existing_evaluation.comments,
+                    "submittedAt": existing_evaluation.submission_date.isoformat()
+                }
+            }
+        else:
+            print(f"✍️  Création d'une nouvelle évaluation")
+            
+            new_evaluation = models.ProfessorEvaluation(
+                thesis_defense_id=defense_id,
+                professor_id=professor_id,
+                score=evaluation_data.score,
+                comments=evaluation_data.comments
+            )
+            
+            db.add(new_evaluation)
+
+            defense.status = 'evaluated'
+            
+            db.commit()
+            db.refresh(new_evaluation)  
+            
+            return {
+                "success": True,
+                "message": "Évaluation soumise avec succès",
+                "evaluation": {
+                    "soutenanceId": defense_id,
+                    "score": new_evaluation.score,
+                    "comments": new_evaluation.comments,
+                    "submittedAt": new_evaluation.submission_date.isoformat()
+                }
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erreur lors de la soumission de l'évaluation: {str(e)}")
+        db.rollback()  
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur lors de la soumission"
+        )
+
+@router.get("/notifications", response_model=List[NotificationSchema])
+async def get_notifications(
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> List[dict]: 
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Professeur non authentifié"
+        )
+    
+    try:
+        notifications = db.query(models.Notification).filter(
+            models.Notification.user_id == professor_id
+        ).order_by(
+            models.Notification.creation_date.desc()  
+        ).all()
+        
+        return notifications
+    
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des notifications: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur lors de la récupération des notifications"
+        )
+
+
+@router.patch("/notifications/{notification_id}/read", response_model=NotificationReadSchema)
+async def mark_notification_read(
+    notification_id: int,
+    current_user: models.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> dict:
+ 
+    professor_id = current_user.id
+    if not professor_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Professeur non authentifié"
+        )
+    
+    try:
+        notification = db.query(models.Notification).filter(
+            models.Notification.id == notification_id
+        ).first()
+        
+        if not notification:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Notification {notification_id} non trouvée"
+            )
+        
+        if notification.user_id != professor_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Vous n'avez pas accès à cette notification"
+            )
+        
+        notification.is_read = True
+        
+        db.commit()
+        
+        db.refresh(notification)
+        
+        return {
+            "success": True,
+            "message": "Notification marquée comme lue",
+            "notification": notification  
+        }
+    
+    except HTTPException:
+        raise  
+    
+    except Exception as e:
+        print(f"❌ Erreur lors du marquage de notification: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur serveur lors du marquage de notification"
+        )

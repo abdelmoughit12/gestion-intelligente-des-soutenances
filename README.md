@@ -130,6 +130,148 @@ soutenance-manager/
 
 ---
 
+## 🏛️ Architecture and Development Guide
+
+This section provides a high-level overview of the project's architecture and a guide for adding new features.
+
+### High-Level Architecture
+
+The application is a monorepo composed of three main services orchestrated by Docker Compose:
+
+1.  **Frontend**: A **Next.js (React)** application responsible for the user interface. It communicates with the backend via a REST API.
+2.  **Backend**: A **FastAPI (Python)** application that serves the API, handles business logic, and interacts with the database.
+3.  **Database**: A **PostgreSQL** database that stores all the application data.
+
+### Authentication Flow
+
+Authentication is handled using JWT (JSON Web Tokens).
+
+1.  **Login**: The user enters their credentials on the frontend, which sends a request to the `/api/v1/auth/login` endpoint on the backend.
+2.  **Token Generation**: The backend authenticates the user. If successful, it generates a JWT access token containing the user's ID, email, and role.
+3.  **Token Storage**: The frontend receives the token and stores it in the browser's `localStorage`.
+4.  **Authenticated Requests**: For subsequent requests to protected endpoints, the frontend attaches the JWT to the `Authorization` header as a `Bearer` token.
+5.  **Token Verification**: The backend uses a dependency (`get_current_user`) to verify the token on protected routes. If the token is valid, the user's information is retrieved from the database and made available to the endpoint. Role-based access is controlled by `require_role` dependencies.
+
+### Backend Development Guide: Adding a New Feature
+
+Here’s a step-by-step guide to adding a new feature (e.g., a "Projects" feature).
+
+#### 1. Create the Model
+
+Define the database table structure in a new file, `backend/app/models/project.py`. This uses SQLAlchemy's ORM.
+
+```python
+# backend/app/models/project.py
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from ..db.session import Base
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+
+    owner = relationship("User")
+```
+
+Remember to import the new model in `backend/app/models/__init__.py`.
+
+#### 2. Create the Schemas
+
+Define the Pydantic schemas for data validation and serialization in `backend/app/schemas/project.py`.
+
+```python
+# backend/app/schemas/project.py
+from pydantic import BaseModel
+
+class ProjectBase(BaseModel):
+    title: str
+    description: str | None = None
+
+class ProjectCreate(ProjectBase):
+    pass
+
+class ProjectUpdate(ProjectBase):
+    pass
+
+class Project(ProjectBase):
+    id: int
+    owner_id: int
+
+    class Config:
+        from_attributes = True
+```
+
+Import the new schemas in `backend/app/schemas/__init__.py`.
+
+#### 3. Create CRUD Operations
+
+Create a file for database operations in `backend/app/crud/crud_project.py`.
+
+```python
+# backend/app/crud/crud_project.py
+from sqlalchemy.orm import Session
+from .base import CRUDBase
+from ..models.project import Project
+from ..schemas.project import ProjectCreate, ProjectUpdate
+
+class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
+    pass
+
+project = CRUDProject(Project)
+```
+
+Import the new CRUD object in `backend/app/crud/__init__.py`.
+
+#### 4. Create the API Router
+
+Create the API endpoints in `backend/app/api/project.py`. Ensure routes are protected with the appropriate dependencies.
+
+```python
+# backend/app/api/project.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from ... import crud, schemas
+from ...dependencies import get_current_user, get_db
+
+router = APIRouter()
+
+@router.post("/", response_model=schemas.Project)
+def create_project(
+    *,
+    db: Session = Depends(get_db),
+    project_in: schemas.ProjectCreate,
+    current_user = Depends(get_current_user)
+):
+    project = crud.project.create_with_owner(db=db, obj_in=project_in, owner_id=current_user.id)
+    return project
+```
+
+#### 5. Include the Router in the Main App
+
+Finally, add the new router to `backend/app/main.py`.
+
+```python
+# backend/app/main.py
+from app.api import project # 1. Import the new router
+
+# ... (inside the main app)
+
+# 2. Include the router
+app.include_router(project.router, prefix="/api/v1/projects", tags=["projects"])
+```
+
+### Frontend Development Guide
+
+1.  **API Service**: Add a function in `frontend/services/api.ts` to call the new `/api/v1/projects` endpoint.
+2.  **Component**: Create a new React component (e.g., `frontend/components/ProjectForm.tsx`) to interact with the API.
+3.  **Page**: Create a new page in `frontend/app/projects/page.tsx` to display the component.
+
+---
+
 ## 🔧 Configuration
 
 ### Backend Environment Variables

@@ -1,0 +1,137 @@
+// frontend/data/mockProfessorData.ts
+// Données de démonstration pour le dashboard professeur Test frontend
+
+import { AssignedSoutenance, ProfessorNotification } from '@/types/soutenance'
+
+export const MOCK_ASSIGNED_SOUTENANCES: AssignedSoutenance[] = [
+  {
+    id: 1,
+    title: 'Système de Recommandation Basé sur l\'IA',
+    studentName: 'Ahmed Bennani',
+    studentEmail: 'ahmed.bennani@student.com',
+    domain: 'AI',
+    status: 'scheduled',
+    scheduledDate: '2025-01-15',
+    scheduledTime: '10:00',
+    reportId: 101,
+    aiSummary:
+      'Système utilisant les réseaux de neurones convolutifs pour recommander des produits basés sur l\'historique de navigation. Architecture innovante avec attention mechanisms.',
+    aiSimilarityScore: 23,
+    juryRole: 'president',
+  },
+  {
+    id: 2,
+    title: 'Application Mobile de Gestion Financière',
+    studentName: 'Fatima El Idrissi',
+    studentEmail: 'fatima.idrissi@student.com',
+    domain: 'Mobile',
+    status: 'scheduled',
+    scheduledDate: '2025-01-15',
+    scheduledTime: '14:00',
+    reportId: 102,
+    aiSummary:
+      'Application mobile React Native complète avec gestion des transactions, budgets et analytiques. Intégration avec plusieurs API bancaires.',
+    aiSimilarityScore: 18,
+    juryRole: 'member',
+  },
+  {
+    id: 3,
+    title: 'Plateforme Web pour E-Commerce',
+    studentName: 'Mohammed Zahra',
+    studentEmail: 'mohammed.zahra@student.com',
+    domain: 'Web',
+    status: 'in_progress',
+    scheduledDate: '2025-01-16',
+    scheduledTime: '09:00',
+    reportId: 103,
+    aiSummary:
+      'Plateforme e-commerce moderne avec React et Node.js. Systèmes de paiement, panier, et gestion d\'inventaire automatisée.',
+    aiSimilarityScore: 15,
+    juryRole: 'examiner',
+    evaluationScore: 18,
+    evaluationComments:
+      'Excellent travail sur l\'architecture et les performances. Un peu de travail sur l\'UI/UX serait bienvenu.',
+    evaluationDate: '2025-01-16',
+    evaluatedByProfessor: 'Prof. Ahmed',
+  },
+  {
+    id: 4,
+    title: 'Système de Cybersécurité pour PME',
+    studentName: 'Nabil Sidi Ali',
+    studentEmail: 'nabil.sidialy@student.com',
+    domain: 'Security',
+    status: 'pending',
+    reportId: 104,
+    aiSummary:
+      'Système de sécurité intégré pour petites et moyennes entreprises. Détection d\'intrusion, authentification multi-facteur et audit logs.',
+    aiSimilarityScore: 12,
+    juryRole: 'secretary',
+  },
+  {
+    id: 5,
+    title: 'IoT Smart Home System',
+    studentName: 'Layla Qassim',
+    studentEmail: 'layla.qassim@student.com',
+    domain: 'IoT',
+    status: 'evaluated',
+    scheduledDate: '2025-01-17',
+    scheduledTime: '11:00',
+    reportId: 105,
+    aiSummary:
+      'Système domotique complet avec capteurs IoT, contrôle vocal et automatisation. Compatible avec Alexa et Google Home.',
+    aiSimilarityScore: 20,
+    juryRole: 'member',
+    evaluationScore: 19,
+    evaluationComments: 'Projet très innovant avec bonne implémentation. Félicitations!',
+    evaluationDate: '2025-01-17',
+    evaluatedByProfessor: 'Prof. Fatima',
+  },
+]
+
+export const MOCK_PROFESSOR_NOTIFICATIONS: ProfessorNotification[] = [
+  {
+    id: 1,
+    message: 'Vous avez été assigné comme président de jury pour "Système de Recommandation IA"',
+    type_action: 'ASSIGNMENT',
+    date_creation: '2025-01-10T08:30:00',
+    est_lue: false,
+    defensesId: 1,
+    studentName: 'Ahmed Bennani',
+  },
+  {
+    id: 2,
+    message: 'La soutenance de "Application Mobile de Gestion Financière" est planifiée le 2025-01-15 à 14:00',
+    type_action: 'DATE_SCHEDULED',
+    date_creation: '2025-01-11T10:00:00',
+    est_lue: false,
+    defensesId: 2,
+    studentName: 'Fatima El Idrissi',
+  },
+  {
+    id: 3,
+    message: 'Vous avez reçu un nouveau document à évaluer: "Plateforme Web pour E-Commerce"',
+    type_action: 'ACCEPTANCE',
+    date_creation: '2025-01-12T14:30:00',
+    est_lue: true,
+    defensesId: 3,
+    studentName: 'Mohammed Zahra',
+  },
+  {
+    id: 4,
+    message: 'Rappel: Évaluation attendue pour "Système de Cybersécurité pour PME" avant demain',
+    type_action: 'DATE_SCHEDULED',
+    date_creation: '2025-01-13T09:00:00',
+    est_lue: false,
+    defensesId: 4,
+    studentName: 'Nabil Sidi Ali',
+  },
+  {
+    id: 5,
+    message: 'Merci pour votre évaluation de "IoT Smart Home System"',
+    type_action: 'ACCEPTANCE',
+    date_creation: '2025-01-13T16:45:00',
+    est_lue: true,
+    defensesId: 5,
+    studentName: 'Layla Qassim',
+  },
+]

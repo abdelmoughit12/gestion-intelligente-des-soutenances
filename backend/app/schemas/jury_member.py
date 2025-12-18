@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from .professor import Professor
-from .thesis_defense import ThesisDefense # For nesting, if needed
 
 from app.models.jury_member import JuryRole # Use the enum from models
 
@@ -22,3 +21,8 @@ class JuryMember(JuryMemberBase):
 
     class Config:
         from_attributes = True
+
+# Properties to receive via API on update
+class JuryMemberUpdate(JuryMemberBase):
+    professor_id: int | None = None
+    role: JuryRole | None = None

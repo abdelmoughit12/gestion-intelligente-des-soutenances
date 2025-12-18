@@ -32,4 +32,29 @@ class CRUDJuryMember:
             .all()
         )
 
+    def get(self, db: Session, *, thesis_defense_id: int, professor_id: int) -> models.JuryMember | None:
+        """
+        Get a specific jury member by thesis_defense_id and professor_id.
+        """
+        return db.query(self.model).filter(
+            self.model.thesis_defense_id == thesis_defense_id,
+            self.model.professor_id == professor_id
+        ).first()
+
+    def update(
+        self, db: Session, *, db_obj: models.JuryMember, obj_in: schemas.JuryMemberUpdate
+    ) -> models.JuryMember:
+        """
+        Update a jury member.
+        """
+        if obj_in.professor_id is not None:
+            db_obj.professor_id = obj_in.professor_id
+        if obj_in.role is not None:
+            db_obj.role = obj_in.role
+
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
 jury_member = CRUDJuryMember(models.JuryMember)

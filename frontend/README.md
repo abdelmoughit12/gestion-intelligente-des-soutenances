@@ -81,9 +81,9 @@ Displays all student requests with status, AI summary, and similarity scores.
 
 The frontend expects the following backend endpoints:
 
-- `POST /api/students/soutenance-requests` - Submit new request
-- `GET /api/students/soutenance-requests` - Get all student requests
-- `GET /api/students/dashboard` - Get dashboard statistics
+- `POST /api/v1/students/soutenance-requests` - Submit new request
+- `GET /api/v1/students/soutenance-requests` - Get all student requests
+- `GET /api/v1/stats/` - Get dashboard statistics
 
 ## Build for Production
 

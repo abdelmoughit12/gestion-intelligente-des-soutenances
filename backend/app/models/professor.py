@@ -6,11 +6,11 @@ class Professor(Base):
     __tablename__ = "professors"
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"), primary_key=True)
-    specialty = Column(String(120), nullable=True) # "Specialite"
+    specialty = Column(String(120), nullable=True) 
 
-    # Relationship back to User
     user = relationship("User", back_populates="professor_details")
     jury_assignments = relationship("JuryMember", back_populates="professor", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Professor(user_id={self.user_id}, specialty='{self.specialty}')>"
+
