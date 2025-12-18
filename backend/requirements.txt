@@ -19,3 +19,6 @@ psycopg2-binary
 python-dotenv
 pydantic[email]
 python-multipart
+google-generativeai==0.7.2
+pypdf2==3.0.1
+pdfplumber==0.11.0

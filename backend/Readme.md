@@ -61,6 +61,7 @@ The backend runs automatically via Docker Compose at:
 ## Notes
 
 - For test data: `docker compose exec backend python scripts/create_test_data.py`
+- AI (Gemini) is optional. Set environment variable `GEMINI_API_KEY` to enable real summaries/domains; without it, the service falls back to heuristic defaults.
 
 ---
 

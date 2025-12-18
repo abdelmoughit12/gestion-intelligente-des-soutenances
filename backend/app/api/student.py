@@ -9,18 +9,11 @@ from uuid import uuid4
 
 from .. import schemas, models
 from .. import crud
-from ..db.session import get_db, SessionLocal
-from ..models import ThesisDefense, Report, Student
+from ..services import ai
+from ..db.session import get_db
 
 # Use the same router and db dependency pattern as professor.py
 router = APIRouter(prefix="/api/students", tags=["students"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # Define the storage path consistent with the professor API
 UPLOAD_DIR = Path("storage/reports")
@@ -67,32 +60,91 @@ async def create_soutenance_request(
             shutil.copyfileobj(pdf.file, file_object)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-
-    # Create Report and ThesisDefense records as in HEAD
-    new_report = Report(
-        file_name=new_filename,
-        file_path=str(file_location),
+    finally:
+        try:
+            await pdf.close()
+        except Exception:
+            pass
+    
+    # AI (Gemini) with safe fallbacks - pass actual PDF path for text extraction
+    import logging
+    import json
+    logger = logging.getLogger(__name__)
+    
+    abs_path = Path(file_location).resolve()
+    rel_path = new_filename
+    
+    logger.info(f"\n{'='*70}")
+    logger.info(f"AI PROCESSING START - Title: {title}")
+    logger.info(f"PDF Path: {abs_path}")
+    logger.info(f"Student Claimed Domain: {domain}")
+    logger.info(f"{'='*70}")
+    
+    # Extract and log PDF content
+    pdf_text = ai.extract_pdf_text(str(abs_path))
+    logger.info(f"Extracted PDF Text: {len(pdf_text)} characters")
+    logger.info(f"Preview: {pdf_text[:200]}...")
+    
+    # Generate summary
+    logger.info("\nGenerating AI Summary...")
+    ai_summary = ai.summarize(title, pdf_path=str(abs_path))
+    logger.info(f"AI Summary: {ai_summary}")
+    
+    # Get domain confidence scores
+    logger.info("\nClassifying Domain...")
+    domain_confidence = ai.classify_domain(title, domain, pdf_path=str(abs_path))
+    logger.info(f"Domain Confidence: {domain_confidence}")
+    # Store as JSON string for database
+    ai_domain = json.dumps(domain_confidence)
+    
+    # Calculate similarity with previous reports
+    logger.info("\nCalculating Similarity...")
+    prior_defenses = crud.thesis_defense.get_by_student(db=db, student_id=student_id)
+    prior_reports = []
+    for defense in prior_defenses:
+        if defense.report:
+            prior_reports.append({
+                'id': defense.id,
+                'title': defense.title,
+                'content': defense.report.ai_summary or defense.title
+            })
+    
+    similarity_result = ai.similarity_score(title, prior_reports, pdf_path=str(abs_path))
+    logger.info(f"Similarity Result: {similarity_result}")
+    # Store similarity as float (max similarity score)
+    ai_similarity_score = similarity_result['max_similarity'] if similarity_result else 0.0
+    
+    logger.info(f"\n{'='*70}")
+    logger.info("AI PROCESSING COMPLETE")
+    logger.info(f"{'='*70}\n")
+    
+    # Create Report entry with the saved relative path
+    report_data = schemas.ReportCreate(
+        file_name=rel_path,
+        ai_summary=ai_summary,
+        ai_domain=ai_domain,
+        ai_similarity_score=ai_similarity_score,
+        student_id=student_id
     )
-    db.add(new_report)
-    db.commit()
+    new_report = crud.report.create(db=db, obj_in=report_data)
     db.refresh(new_report)
 
-    new_thesis_defense = ThesisDefense(
+    # Create ThesisDefense entry
+    defense_data = schemas.ThesisDefenseCreate(
         title=title,
         student_id=student_id,
         report_id=new_report.id,
         status="pending"
     )
-    db.add(new_thesis_defense)
-
-    # Manually update student's domain if provided
-    student = db.query(Student).filter(Student.user_id == student_id).first()
-    if student:
-        student.major = domain
+    new_thesis_defense = crud.thesis_defense.create(db=db, obj_in=defense_data)
     
-    db.commit()
+    # Update student's domain if provided
+    student = db.query(models.Student).filter(models.Student.user_id == student_id).first()
+    if student and domain:
+        student.major = domain
+        db.commit()
+    
     db.refresh(new_thesis_defense)
-
     return new_thesis_defense
 
 
