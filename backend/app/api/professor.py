@@ -20,9 +20,9 @@ import os
 
 from .. import schemas, models, crud
 from ..db.session import get_db
-from ..dependencies import get_current_user, require_role
+from ..dependencies import require_professor
 
-router = APIRouter(dependencies=[Depends(require_role("professor"))])
+router = APIRouter()
 
 class AssignedSoutenanceSchema(BaseModel):
    
@@ -39,7 +39,7 @@ class AssignedSoutenanceSchema(BaseModel):
     juryRole: str
     
     class Config:
-        from_attributes = True  
+        from_attributes = True
 
 
 class EvaluationSubmitSchema(BaseModel):
@@ -81,7 +81,7 @@ def read_professors(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: models.user.User = Depends(get_current_user)
+    current_user: models.user.User = Depends(require_professor)
 ):
     """
     Retrieve all professors.
@@ -94,7 +94,7 @@ def read_professor(
     *,
     db: Session = Depends(get_db),
     professor_id: int,
-    current_user: models.user.User = Depends(get_current_user)
+    current_user: models.user.User = Depends(require_professor)
 ):
     professor = crud.crud_professor.get(db, id=professor_id)
     if not professor:
@@ -103,16 +103,11 @@ def read_professor(
 
 @router.get("/assigned-soutenances", response_model=List[AssignedSoutenanceSchema])
 async def get_assigned_soutenances(
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ) -> List[dict]:
     
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(
-            status_code=401, 
-            detail="Professeur non authentifié"
-        )
     
     try:
         soutenances_data = db.query(
@@ -176,13 +171,11 @@ async def get_assigned_soutenances(
 @router.get("/soutenances/{defense_id}", response_model=AssignedSoutenanceSchema)
 async def get_soutenance_detail(
     defense_id: int,
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ) -> dict:
     
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(status_code=401, detail="Professeur non authentifié")
 
     try:
         access_check = db.query(models.JuryMember).filter(
@@ -268,13 +261,11 @@ async def get_soutenance_detail(
 @router.get("/soutenances/{defense_id}/report/download")
 async def download_report(
     defense_id: int,
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ):
     
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(status_code=401, detail="Professeur non authentifié")
     
     try:
         access_check = db.query(models.JuryMember).filter(
@@ -346,13 +337,11 @@ async def download_report(
 async def submit_evaluation(
     defense_id: int,
     evaluation_data: EvaluationSubmitSchema,
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ) -> dict:
     
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(status_code=401, detail="Professeur non authentifié")
     
     try:
         access_check = db.query(models.JuryMember).filter(
@@ -446,15 +435,10 @@ async def submit_evaluation(
 
 @router.get("/notifications", response_model=List[NotificationSchema])
 async def get_notifications(
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ) -> List[dict]: 
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Professeur non authentifié"
-        )
     
     try:
         notifications = db.query(models.Notification).filter(
@@ -476,16 +460,11 @@ async def get_notifications(
 @router.patch("/notifications/{notification_id}/read", response_model=NotificationReadSchema)
 async def mark_notification_read(
     notification_id: int,
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_professor),
     db: Session = Depends(get_db)
 ) -> dict:
  
     professor_id = current_user.id
-    if not professor_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Professeur non authentifié"
-        )
     
     try:
         notification = db.query(models.Notification).filter(

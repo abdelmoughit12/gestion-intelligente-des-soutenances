@@ -1,25 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/services/auth";
+import { login, getCurrentUser } from "@/services/auth"; // Added getCurrentUser
+import { useAuth } from "@/hooks/useAuth";
+import { UserRole } from "@/types/soutenance"; // Added UserRole import
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      // If user is already logged in (e.g., page refresh), redirect based on role
+      if (user.role === UserRole.Manager) {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
+      }
+    }
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       await login(email, password);
-      router.push("/");
+      const loggedInUser = getCurrentUser(); // Get the newly logged-in user
+      if (loggedInUser && loggedInUser.role === UserRole.Manager) {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
+      }
     } catch (err: any) {
       setError(err.message);
     }
   };
+
+  if (loading || user) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

@@ -12,10 +12,10 @@ import json
 from .. import schemas, models, crud
 from ..services import ai
 from ..db.session import get_db
-from ..dependencies import get_current_user, require_role
+from ..dependencies import require_student
 from ..models import ThesisDefense, Report, Student
 
-router = APIRouter(dependencies=[Depends(require_role("student"))])
+router = APIRouter()
 
 UPLOAD_DIR = Path("storage/reports")
 UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
@@ -40,7 +40,7 @@ async def create_soutenance_request(
     title: str = Form(...),
     domain: str = Form(...),
     pdf: UploadFile = File(...),
-    current_user: models.user.User = Depends(get_current_user)
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Create a new soutenance request (thesis defense).
@@ -150,7 +150,7 @@ async def create_soutenance_request(
 @router.get("/soutenance-requests", response_model=List[schemas.ThesisDefense])
 def get_student_requests(
     db: Session = Depends(get_db),
-    current_user: models.user.User = Depends(get_current_user),
+    current_user: models.user.User = Depends(require_student),
     skip: int = 0,
     limit: int = 100
 ):
@@ -164,7 +164,7 @@ def get_student_requests(
 @router.get("/dashboard", response_model=schemas.StudentDashboardStats)
 def get_student_dashboard(
     db: Session = Depends(get_db),
-    current_user: models.user.User = Depends(get_current_user)
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Get dashboard statistics for a student.
@@ -194,7 +194,7 @@ def get_single_request(
     *,
     db: Session = Depends(get_db),
     defense_id: int,
-    current_user: models.user.User = Depends(get_current_user)
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Get details of a specific soutenance request.
@@ -203,8 +203,8 @@ def get_single_request(
     if not defense:
         raise HTTPException(status_code=404, detail="Request not found")
     
-    # Ensure the request belongs to this student
-    if defense.student_id != current_user.id:
+    # Ensure the request belongs to this student or the user is a manager/professor
+    if defense.student_id != current_user.id and current_user.role in ['student']:
         raise HTTPException(status_code=403, detail="Not authorized to view this request")
     
     return defense

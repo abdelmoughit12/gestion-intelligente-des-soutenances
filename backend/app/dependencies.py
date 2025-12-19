@@ -51,17 +51,41 @@ async def get_current_user_from_request_if_exists(
         pass
     return None
 
-def require_role(required_role: UserRole):
+def require_role(required_roles: list[UserRole]):
     def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role != required_role:
+        if current_user.role not in required_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Not enough permissions. User role: {current_user.role}. Required role: {required_role}"
+                detail=f"Not enough permissions. User role: {current_user.role}. Required roles: {required_roles}"
             )
         return current_user
     return role_checker
 
-require_student = require_role(UserRole.student)
-require_professor = require_role(UserRole.professor)
-require_manager = require_role(UserRole.manager)
-require_admin = require_role(UserRole.admin)
+def require_min_role(min_required_role: UserRole):
+    
+    role_hierarchy = {
+        UserRole.student: 1,
+        UserRole.professor: 2,
+        UserRole.manager: 3
+    }
+
+    def role_checker(current_user: User = Depends(get_current_user)):
+        
+        user_level = role_hierarchy.get(current_user.role, 0)
+        required_level = role_hierarchy.get(min_required_role, 0)
+
+        if user_level < required_level:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Not enough permissions. User role: '{current_user.role}' "
+                    f"does not meet minimum required role: '{min_required_role}'"
+                )
+            )
+        return current_user
+    return role_checker
+
+# Dependencies for specific roles or minimum levels
+require_student = require_min_role(UserRole.student)
+require_professor = require_min_role(UserRole.professor)
+require_manager = require_min_role(UserRole.manager)

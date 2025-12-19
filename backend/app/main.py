@@ -61,7 +61,7 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="Soutenance Manager API",
         version="1.0.0",
-        description="API for managing thesis defenses, including student submissions, professor evaluations, and administrative oversight. This API provides secure access via JWT authentication for different user roles (student, professor, manager, admin).",
+        description="API for managing thesis defenses, including student submissions, professor evaluations, and administrative oversight. This API provides secure access via JWT authentication for different user roles (student, professor, manager).",
         routes=app.routes,
     )
     openapi_schema["components"]["securitySchemes"] = {

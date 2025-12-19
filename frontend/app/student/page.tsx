@@ -1,5 +1,11 @@
 import MultiPageDashboard from '@/components/MultiPageDashboard'
+import withAuth from '@/components/withAuth'
+import { UserRole } from '@/types/soutenance';
 
-export default function StudentPage() {
+function StudentPage() {
     return <MultiPageDashboard />
 }
+
+const AuthStudentPage = withAuth(StudentPage, UserRole.Student);
+
+export default AuthStudentPage;

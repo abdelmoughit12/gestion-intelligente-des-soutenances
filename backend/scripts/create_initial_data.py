@@ -40,14 +40,6 @@ async def create_initial_users():
             "role": UserRole.manager,
             "cni": "MA12345"
         },
-        {
-            "email": "admin@example.com",
-            "password": "password",
-            "first_name": "Admin",
-            "last_name": "User",
-            "role": UserRole.admin,
-            "cni": "AD12345"
-        },
     ]
 
     for user_data in users_to_create:

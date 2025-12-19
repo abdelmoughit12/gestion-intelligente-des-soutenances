@@ -4,6 +4,12 @@ export type Domain = 'Web' | 'AI' | 'IoT' | 'Mobile' | 'Security' | 'Data Scienc
 
 export type JuryRole = 'president' | 'secretary' | 'examiner' | 'member';
 
+export enum UserRole {
+  Student = "student",
+  Professor = "professor",
+  Manager = "manager",
+}
+
 export interface JuryMember {
   professorId: string;
   role: JuryRole;

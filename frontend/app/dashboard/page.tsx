@@ -5,7 +5,10 @@ import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { SectionCards } from "@/components/section-cards";
 import { getDashboardData, StatsData } from "@/services/api";
 
-export default function Page() {
+import withAuth from "@/components/withAuth";
+import { UserRole } from "@/types/soutenance";
+
+function Page() {
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,3 +54,5 @@ export default function Page() {
     </div>
   );
 }
+
+export default withAuth(Page, UserRole.Manager);
