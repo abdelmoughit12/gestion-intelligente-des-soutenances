@@ -23,15 +23,6 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor to add professor ID for testing
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const professorId = localStorage.getItem('professorId') || '1' // for testing
-    config.headers['X-Professor-Id'] = professorId
-  }
-  return config
-})
-
 // Helper function to construct file URLs
 const toFileUrl = (maybePath?: string | null) => {
   if (!maybePath) return ''
@@ -128,6 +119,18 @@ export const getDashboardData = async (): Promise<StatsData> => {
       throw new Error(error.response.data.detail || 'Failed to fetch dashboard data');
     }
     throw new Error('Network error. Please check your connection.');
+  }
+}
+
+export const getDefenses = async () => {
+  try {
+    const response = await api.get('/api/v1/thesis-defenses/')
+    return response.data
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch defenses')
+    }
+    throw new Error('Network error. Please check your connection.')
   }
 }
 
