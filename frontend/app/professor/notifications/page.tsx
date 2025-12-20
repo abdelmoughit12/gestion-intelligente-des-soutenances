@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react';
 import ProfessorLayout from '@/components/shared/ProfessorLayout';
 import withAuth from '@/components/withAuth';
@@ -17,7 +19,7 @@ const NotificationListComponent = () => {
 
 function ProfessorNotificationsPage() {
     // Simulation du nombre de notifs non lues pour le layout
-    const unreadCount = 2; 
+    const unreadCount = 2;
 
     return (
         <ProfessorLayout pageTitle="Mes Notifications" unreadCount={unreadCount}>

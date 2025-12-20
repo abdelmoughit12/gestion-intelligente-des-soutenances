@@ -10,6 +10,11 @@ export enum UserRole {
   Manager = "manager",
 }
 
+export interface User {
+  email: string;
+  role: string;
+}
+
 export interface JuryMember {
   professorId: string;
   role: JuryRole;
@@ -37,11 +42,11 @@ export interface RequestFormData {
 }
 
 export interface Notification {
-    id: number;
-    message: string;
-    type_action: 'ASSIGNMENT' | 'ACCEPTANCE' | 'REFUSAL' | 'DATE_SCHEDULED';
-    date_creation: string;
-    est_lue: boolean;
+  id: number;
+  message: string;
+  type_action: 'ASSIGNMENT' | 'ACCEPTANCE' | 'REFUSAL' | 'DATE_SCHEDULED';
+  date_creation: string;
+  est_lue: boolean;
 }
 
 export interface AssignedSoutenance {

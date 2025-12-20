@@ -3,13 +3,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { UserRole } from "@/types/soutenance"; // Assuming you have this type defined
+import { UserRole } from "@/types/soutenance";
 
-// Define a role hierarchy for authorization
-const roleHierarchy = {
-  [UserRole.Student]: 1,
-  [UserRole.Professor]: 2,
-  [UserRole.Manager]: 3,
+// Define a role hierarchy for authorization (using string values to match backend)
+const roleHierarchy: Record<string, number> = {
+  "student": 1,
+  "professor": 2,
+  "manager": 3,
 };
 
 const withAuth = (
@@ -23,8 +23,9 @@ const withAuth = (
     useEffect(() => {
       if (!loading) {
         if (!user) {
-          // If not authenticated, redirect to login
-          router.push("/login");
+          // If not authenticated, redirect to login with current path as redirect parameter
+          const currentPath = window.location.pathname;
+          router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
         } else {
           // If authenticated, check for authorization
           const userLevel = roleHierarchy[user.role] || 0;
@@ -33,7 +34,7 @@ const withAuth = (
           if (userLevel < requiredLevel) {
             // If user's role is insufficient, redirect to an unauthorized page
             // It's good practice to have a dedicated page for this
-            router.push("/unauthorized"); 
+            router.push("/unauthorized");
           }
         }
       }
@@ -53,10 +54,10 @@ const withAuth = (
     // Check role again before rendering to avoid flashing unauthorized content
     const userLevel = roleHierarchy[user.role] || 0;
     const requiredLevel = roleHierarchy[minRequiredRole] || 0;
-    
+
     if (userLevel < requiredLevel) {
       // It's good to have a fallback here in case the redirect is slow
-      return null; 
+      return null;
     }
 
     // If authenticated and authorized, render the wrapped component

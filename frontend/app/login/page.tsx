@@ -1,42 +1,65 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { login, getCurrentUser } from "@/services/auth"; // Added getCurrentUser
+import { useRouter, useSearchParams } from "next/navigation";
+import { login, getCurrentUser } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth";
-import { UserRole } from "@/types/soutenance"; // Added UserRole import
+import { UserRole } from "@/types/soutenance";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  // Get redirect parameter from URL
+  const redirectPath = searchParams.get("redirect");
 
   useEffect(() => {
     if (!loading && user) {
-      // If user is already logged in (e.g., page refresh), redirect based on role
-      if (user.role === UserRole.Manager) {
+      // If user is already logged in, redirect based on redirect param or role
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else if (user.role === UserRole.Manager) {
         router.push("/dashboard");
+      } else if (user.role === "student") {
+        router.push("/student");
+      } else if (user.role === "professor") {
+        router.push("/professor/dashboard");
       } else {
         router.push("/");
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, redirectPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       await login(email, password);
-      const loggedInUser = getCurrentUser(); // Get the newly logged-in user
-      if (loggedInUser && loggedInUser.role === UserRole.Manager) {
+      const loggedInUser = getCurrentUser();
+
+      // Redirect to original route or default dashboard
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else if (loggedInUser && loggedInUser.role === UserRole.Manager) {
         router.push("/dashboard");
+      } else if (loggedInUser && loggedInUser.role === "student") {
+        router.push("/student");
+      } else if (loggedInUser && loggedInUser.role === "professor") {
+        router.push("/professor/dashboard");
       } else {
         router.push("/");
       }
     } catch (err: any) {
-      setError(err.message);
+      // Display user-friendly error message from backend
+      if (err.message) {
+        setError(err.message);
+      } else {
+        setError("Login failed. Please try again.");
+      }
     }
   };
 
@@ -85,7 +108,11 @@ export default function LoginPage() {
               className="block w-full px-3 py-2 mt-1 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
           <div>
             <button
               type="submit"
@@ -95,6 +122,26 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+
+        <div className="text-center space-y-2">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{" "}
+            <button
+              onClick={() => router.push("/register")}
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
+              Register here
+            </button>
+          </p>
+          <p className="text-sm text-gray-600">
+            <button
+              onClick={() => router.push("/welcome")}
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
+              Back to Welcome
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

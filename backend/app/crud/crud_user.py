@@ -29,3 +29,7 @@ def authenticate(db: Session, *, email: str, password: str) -> Optional[User]:
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+def check_user_exists(db: Session, email: str) -> bool:
+    """Check if a user with the given email exists."""
+    return get_user_by_email(db, email=email) is not None
