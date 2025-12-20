@@ -1,22 +1,22 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 import os
 import shutil
 from uuid import uuid4
+import logging
+import json
 
-from .. import schemas, models
-from .. import crud
+from .. import schemas, models, crud
 from ..services import ai
 from ..db.session import get_db
+from ..dependencies import require_student
 from ..models import ThesisDefense, Report, Student
 
-# Use the same router and db dependency pattern as professor.py
-router = APIRouter(prefix="/api/students", tags=["students"])
+router = APIRouter()
 
-# Define the storage path consistent with the professor API
 UPLOAD_DIR = Path("storage/reports")
 UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -40,18 +40,19 @@ async def create_soutenance_request(
     title: str = Form(...),
     domain: str = Form(...),
     pdf: UploadFile = File(...),
-    student_id: int = Form(1),  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Create a new soutenance request (thesis defense).
     Uploads PDF report, creates report entry, and creates thesis defense entry.
     """
+    student_id = current_user.id
+    # Validate PDF file
     if not pdf.filename or not pdf.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     if pdf.content_type and pdf.content_type not in ALLOWED_PDF_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="Invalid PDF content type")
 
-    # Use the file saving logic from HEAD, which is simpler and consistent.
     file_extension = os.path.splitext(pdf.filename)[1]
     new_filename = f"report_student_{student_id}_{title.replace(' ', '_')}_{uuid4().hex[:6]}{file_extension}"
     file_location = os.path.join(UPLOAD_DIR, new_filename)
@@ -66,10 +67,8 @@ async def create_soutenance_request(
             await pdf.close()
         except Exception:
             pass
-    
+
     # AI (Gemini) with safe fallbacks - pass actual PDF path for text extraction
-    import logging
-    import json
     logger = logging.getLogger(__name__)
     
     abs_path = Path(file_location).resolve()
@@ -128,8 +127,7 @@ async def create_soutenance_request(
         student_id=student_id
     )
     new_report = crud.report.create(db=db, obj_in=report_data)
-    db.refresh(new_report)
-
+    
     # Create ThesisDefense entry
     defense_data = schemas.ThesisDefenseCreate(
         title=title,
@@ -152,26 +150,26 @@ async def create_soutenance_request(
 @router.get("/soutenance-requests", response_model=List[schemas.ThesisDefense])
 def get_student_requests(
     db: Session = Depends(get_db),
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(require_student),
     skip: int = 0,
     limit: int = 100
 ):
     """
     Retrieve all soutenance requests for a specific student.
     """
-    defenses = db.query(ThesisDefense).filter(ThesisDefense.student_id == student_id).offset(skip).limit(limit).all()
+    defenses = crud.thesis_defense.get_by_student(db=db, student_id=current_user.id, skip=skip, limit=limit)
     return defenses
 
 
 @router.get("/dashboard", response_model=schemas.StudentDashboardStats)
 def get_student_dashboard(
     db: Session = Depends(get_db),
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Get dashboard statistics for a student.
     """
-    defenses = db.query(ThesisDefense).filter(ThesisDefense.student_id == student_id).all()
+    defenses = crud.thesis_defense.get_by_student(db=db, student_id=current_user.id)
 
     today = date.today()
     upcoming_cutoff = today + timedelta(days=7)
@@ -196,16 +194,17 @@ def get_single_request(
     *,
     db: Session = Depends(get_db),
     defense_id: int,
-    student_id: int = 1,  # TODO: Get from authenticated user session
+    current_user: models.user.User = Depends(require_student)
 ):
     """
     Get details of a specific soutenance request.
     """
-    defense = db.query(ThesisDefense).filter(ThesisDefense.id == defense_id).first()
+    defense = db.query(models.ThesisDefense).filter(models.ThesisDefense.id == defense_id).first()
     if not defense:
         raise HTTPException(status_code=404, detail="Request not found")
     
-    if defense.student_id != student_id:
+    # Ensure the request belongs to this student or the user is a manager/professor
+    if defense.student_id != current_user.id and current_user.role in ['student']:
         raise HTTPException(status_code=403, detail="Not authorized to view this request")
     
     return defense

@@ -17,8 +17,13 @@ uvicorn==0.38.0
 watchfiles
 psycopg2-binary
 python-dotenv
+email-validator
 pydantic[email]
 python-multipart
 google-generativeai==0.7.2
 pypdf2==3.0.1
 pdfplumber==0.11.0
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1

@@ -5,14 +5,18 @@ import { UnifiedSidebar } from '@/components/unified-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { SiteHeader } from '@/components/site-header'
 import ProfessorDashboard from '@/components/professor/ProfessorDashboard'
+import withAuth from '@/components/withAuth'
+import { UserRole } from '@/types/soutenance'
+import { useAuth } from '@/hooks/useAuth'
 
-export default function ProfessorDashboardPage() {
+function ProfessorDashboardPage() {
+  const { user } = useAuth();
   return (
     <SidebarProvider>
       <UnifiedSidebar
         role="professor"
-        userName="Test Professor"
-        userEmail="professor@example.com"
+        userName={user?.name || "Professor"}
+        userEmail={user?.email || ""}
         variant="inset"
       />
       <SidebarInset>
@@ -28,3 +32,5 @@ export default function ProfessorDashboardPage() {
     </SidebarProvider>
   )
 }
+
+export default withAuth(ProfessorDashboardPage, UserRole.Professor);

@@ -3,12 +3,16 @@ from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..schemas import stats as schemas_stats
 from ..crud import crud_stats
+from ..dependencies import get_current_user, require_role
+from ..models.user import User
 
-router = APIRouter(prefix="/api")
+router = APIRouter()
 
-@router.get("/stats/", response_model=schemas_stats.OverallStats)
+@router.get("/", response_model=schemas_stats.OverallStats)
 def read_overall_stats(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _: bool = Depends(require_role("manager"))
 ):
     """
     Retrieve overall statistics for the application.

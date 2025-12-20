@@ -1,7 +1,7 @@
-// frontend/app/professor/notifications/page.tsx
-
 import React from 'react';
 import ProfessorLayout from '@/components/shared/ProfessorLayout';
+import withAuth from '@/components/withAuth';
+import { UserRole } from '@/types/soutenance';
 
 // Créez ici un composant pour afficher la liste complète des notifications
 const NotificationListComponent = () => {
@@ -15,7 +15,7 @@ const NotificationListComponent = () => {
     );
 };
 
-export default function ProfessorNotificationsPage() {
+function ProfessorNotificationsPage() {
     // Simulation du nombre de notifs non lues pour le layout
     const unreadCount = 2; 
 
@@ -25,3 +25,5 @@ export default function ProfessorNotificationsPage() {
         </ProfessorLayout>
     );
 }
+
+export default withAuth(ProfessorNotificationsPage, UserRole.Professor);
