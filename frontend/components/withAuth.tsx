@@ -5,12 +5,28 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { UserRole } from "@/types/soutenance";
 
-// Define a role hierarchy for authorization (using string values to match backend)
-const roleHierarchy: Record<string, number> = {
-  "student": 1,
-  "professor": 2,
-  "manager": 3,
+// Define a role hierarchy for authorization
+const roleHierarchy: Record<UserRole, number> = {
+  [UserRole.Student]: 1,
+  [UserRole.Professor]: 2,
+  [UserRole.Manager]: 3,
 };
+
+// Function to get the dashboard route for a given role
+const getDashboardRoute = (role: UserRole): string => {
+  switch (role) {
+    case UserRole.Student:
+      return "/student";
+    case UserRole.Professor:
+      return "/professor/dashboard";
+    case UserRole.Manager:
+      return "/dashboard";
+    default:
+      return "/login"; // Fallback
+  }
+};
+
+// ... (imports and roleHierarchy remain the same)
 
 const withAuth = (
   WrappedComponent,
@@ -23,44 +39,28 @@ const withAuth = (
     useEffect(() => {
       if (!loading) {
         if (!user) {
-          // If not authenticated, redirect to login with current path as redirect parameter
-          const currentPath = window.location.pathname;
-          router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+          // If not authenticated, redirect to login
+          router.push("/login");
         } else {
-          // If authenticated, check for authorization
-          const userLevel = roleHierarchy[user.role] || 0;
-          const requiredLevel = roleHierarchy[minRequiredRole] || 0;
-
-          if (userLevel < requiredLevel) {
-            // If user's role is insufficient, redirect to an unauthorized page
-            // It's good practice to have a dedicated page for this
-            router.push("/unauthorized");
+          // If authenticated, check for exact role match
+          if (user.role !== minRequiredRole) {
+            // If user's role is not the exact required role, redirect to their own dashboard
+            const userDashboard = getDashboardRoute(user.role as UserRole);
+            router.push(userDashboard);
           }
         }
       }
     }, [user, loading, router, minRequiredRole]);
 
-    // While loading, show a loading indicator
-    if (loading) {
-      return <div>Loading...</div>; // Or a more sophisticated skeleton loader
+    if (loading || !user) {
+      return <div>Loading...</div>;
+    }
+    
+    // Final check before rendering to avoid content flashing
+    if (user.role !== minRequiredRole) {
+        return null;
     }
 
-    // If there's no user, return null to prevent rendering the component
-    // before the redirect kicks in
-    if (!user) {
-      return null;
-    }
-
-    // Check role again before rendering to avoid flashing unauthorized content
-    const userLevel = roleHierarchy[user.role] || 0;
-    const requiredLevel = roleHierarchy[minRequiredRole] || 0;
-
-    if (userLevel < requiredLevel) {
-      // It's good to have a fallback here in case the redirect is slow
-      return null;
-    }
-
-    // If authenticated and authorized, render the wrapped component
     return <WrappedComponent {...props} />;
   };
 
@@ -70,3 +70,4 @@ const withAuth = (
 };
 
 export default withAuth;
+

@@ -8,7 +8,7 @@ from app.db.session import Base, engine
 from app import models
 
 # Import all API routers
-from app.api import professor, student, thesis_defense, stats, auth, user
+from app.api import professor, student, thesis_defense, stats, auth, user, manager
 
 # Create database tables on startup
 Base.metadata.create_all(bind=engine)
@@ -48,6 +48,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 # Include all routers with versioned prefixes
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(user.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(manager.router, prefix="/api/v1/manager", tags=["manager"])
 app.include_router(thesis_defense.router, prefix="/api/v1/thesis-defenses", tags=["thesis-defenses"])
 app.include_router(professor.router, prefix="/api/v1/professors", tags=["professors"])
 app.include_router(student.router, prefix="/api/v1/students", tags=["students"])

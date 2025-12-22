@@ -8,12 +8,14 @@ import DashboardHome from './DashboardHome'
 import SoutenanceRequestForm from './SoutenanceRequestForm'
 import RequestHistory from './RequestHistory'
 import { SoutenanceRequest } from '@/types/soutenance'
+import { useAuth } from '@/hooks/useAuth' // Import useAuth
 
 type Page = 'home' | 'upload' | 'history'
 
 export default function MultiPageDashboard() {
     const [currentPage, setCurrentPage] = useState<Page>('home')
     const [requests, setRequests] = useState<SoutenanceRequest[]>([])
+    const { user, loading } = useAuth(); // Use the useAuth hook
 
     // Handle URL-based navigation
     useEffect(() => {
@@ -36,12 +38,21 @@ export default function MultiPageDashboard() {
         handleNavigate('history')
     }
 
+    if (loading) {
+        return <div>Loading dashboard...</div>; // Show loading state
+    }
+
+    // If no user, the withAuth HOC on StudentPage should redirect
+    if (!user) {
+        return null;
+    }
+
     return (
         <SidebarProvider>
             <UnifiedSidebar
-                role="student"
-                userName="Test Student"
-                userEmail="student@example.com"
+                role={user.role} // Dynamic role
+                userName={`${user.first_name || ''} ${user.last_name || ''}`} // Dynamic name
+                userEmail={user.email} // Dynamic email
                 variant="inset"
             />
             <SidebarInset>

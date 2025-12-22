@@ -8,10 +8,22 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     cni: Optional[str] = None
-    role: UserRole # Ensure role is of type UserRole enum
+    phone: Optional[str] = None
+    role: UserRole
+    is_active: bool = False
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
+    password: str
+
+# Schema for student registration
+class StudentRegistration(BaseModel):
+    first_name: str
+    last_name: str
+    cni: str
+    cne: str
+    email: EmailStr
+    phone: str
     password: str
 
 # Properties to return to client

@@ -10,6 +10,30 @@ interface JWTPayload {
   exp: number;  // expiration timestamp
 }
 
+// Corresponds to the Pydantic schema in the backend
+export interface StudentRegistration {
+  first_name: string;
+  last_name: string;
+  cni: string;
+  cne: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
+export const registerStudent = async (data: StudentRegistration) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/register/student`, data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Registration failed:", error);
+    if (error.response && error.response.data && error.response.data.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    throw new Error("Registration failed. Please try again.");
+  }
+};
+
 export const login = async (email: string, password: string) => {
   const params = new URLSearchParams();
   params.append('username', email);

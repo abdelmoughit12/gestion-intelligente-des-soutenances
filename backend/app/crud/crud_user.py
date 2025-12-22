@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from ..models.user import User, UserRole
 from ..core.security import get_password_hash, verify_password
@@ -6,6 +6,31 @@ from ..schemas.user import UserCreate
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
+
+def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()
+
+def get_pending_students(db: Session) -> List[User]:
+    """
+    Retrieves a list of all student users that are not yet active.
+    """
+    return db.query(User).filter(User.role == UserRole.student, User.is_active == False).all()
+
+def activate_user(db: Session, user: User) -> User:
+    """
+    Activates a user's account.
+    """
+    user.is_active = True
+    db.commit()
+    db.refresh(user)
+    return user
+
+def delete_user(db: Session, user: User):
+    """
+    Deletes a user's account.
+    """
+    db.delete(user)
+    db.commit()
 
 def create_user(db: Session, user: UserCreate) -> User:
     hashed_password = get_password_hash(user.password)

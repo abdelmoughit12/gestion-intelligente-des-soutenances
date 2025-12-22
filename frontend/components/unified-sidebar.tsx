@@ -12,6 +12,7 @@ import {
     FileTextIcon,
     UsersIcon,
     CalendarIcon,
+    UserPlusIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -88,6 +89,16 @@ const getRoleNavigation = (role: UserRole) => {
                     title: "Soutenances",
                     url: "/dashboard/defenses",
                     icon: ListIcon,
+                },
+                {
+                    title: "Accept Students",
+                    url: "/dashboard/manager/requests",
+                    icon: UsersIcon,
+                },
+                {
+                    title: "Add Professor",
+                    url: "/dashboard/manager/professors",
+                    icon: UserPlusIcon,
                 },
             ]
         default:

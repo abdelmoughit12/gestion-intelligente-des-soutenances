@@ -10,13 +10,24 @@ import { UserRole } from '@/types/soutenance'
 import { useAuth } from '@/hooks/useAuth'
 
 function ProfessorDashboardPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a more sophisticated skeleton loader
+  }
+
+  // If user is null, withAuth on individual pages will redirect.
+  // This layout won't render for unauthenticated users in practice.
+  if (!user) {
+    return null; 
+  }
+
   return (
     <SidebarProvider>
       <UnifiedSidebar
-        role="professor"
-        userName={user?.name || "Professor"}
-        userEmail={user?.email || ""}
+        role={user.role}
+        userName={`${user.first_name || ''} ${user.last_name || ''}`}
+        userEmail={user.email}
         variant="inset"
       />
       <SidebarInset>

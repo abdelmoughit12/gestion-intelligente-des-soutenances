@@ -12,11 +12,14 @@ A smart thesis defense (soutenance) management platform built with FastAPI and N
 ## 🚀 Features
 
 - 📝 **Student Dashboard**: Submit thesis defense requests with PDF uploads
+- 🆕 **Student Registration Workflow**: Students can register for an account, which remains inactive until approved by a manager.
 - 🤖 **AI Integration**: Automated PDF analysis for summaries and domain detection
 - 👨‍🏫 **Professor Management**: Jury assignment and availability tracking
+- 🆕 **Manager Professor Management**: Managers can add new professor accounts directly.
 - 📊 **Request Tracking**: Real-time status monitoring (pending/accepted/refused)
+- 🆕 **Manager Student Approval**: Managers can view and approve/reject pending student registrations.
 - 🗓️ **Smart Scheduling**: Automated defense scheduling
-- 🔒 **Role-Based Access**: Student, Professor, Manager roles
+- 🔒 **Role-Based Access**: Student, Professor, Manager roles with strict route protection.
 
 ---
 
@@ -48,22 +51,22 @@ This project supports two ways to run locally.
 
     ```bash
     # Build and start all services (PostgreSQL, Backend, Frontend) in detached mode
-    docker compose up --build -d
+    docker compose up -d --build
     ```
 
-2.  **Prepare Backend Environment (for data seeding):**
+2.  **Prepare Backend Environment:**
     Ensure a `.env` file exists in the `backend/` directory. If not, copy from `.env.example`:
     ```bash
     cp backend/.env.example backend/.env # For Linux/macOS
     # For Windows PowerShell:
     # Copy-Item backend\.env.example backend\.env
     ```
-    (Note: The `SECRET_KEY` in `backend/.env` should be a strong, random 32-character key for production, but can be left as default for development.)
+    Make sure the `.env` file contains the `DATABASE_URL` and `GEMINI_API_KEY` as specified in the project requirements.
 
 3.  **Seed Initial Data:**
-    This step populates the database with essential users (admin, student, professor, manager).
+    This step populates the database with essential users (manager, student, professor).
     ```bash
-    docker compose run --rm backend python scripts/create_initial_data.py
+    docker compose exec backend python seed_data.py
     ```
 
 4.  **Access Applications:**
@@ -109,22 +112,37 @@ soutenance-manager/
 │   │   ├── api/              # API endpoints
 │   │   │   ├── student.py    # Student endpoints
 │   │   │   ├── professor.py  # Professor endpoints
-│   │   │   └── thesis_defense.py
+│   │   │   ├── thesis_defense.py
+│   │   │   ├── manager.py    # NEW: Manager-specific endpoints
+│   │   │   └── auth.py       # UPDATED: Added student registration endpoint
 │   │   ├── crud/             # Database operations
+│   │   │   ├── crud_student.py # NEW: Student-specific CRUD operations
+│   │   │   └── crud_professor.py # UPDATED: Professor CRUD operations
 │   │   ├── db/               # Database configuration
-│   │   ├── models/           # SQLAlchemy models
-│   │   └── schemas/          # Pydantic schemas
+│   │   ├── models/           # SQLAlchemy models (UPDATED: User model)
+│   │   └── schemas/          # Pydantic schemas (UPDATED: User, Professor schemas)
 │   ├── scripts/              # Utility scripts
 │   ├── uploads/              # PDF file storage
+│   ├── seed_data.py          # UPDATED: Seed script for initial data
 │   └── requirements.txt
 ├── frontend/
 │   ├── app/                  # Next.js app directory
+│   │   ├── register/page.tsx # UPDATED: Student registration page
+│   │   ├── dashboard/manager/requests/page.tsx # NEW: Manager student approval page
+│   │   ├── dashboard/manager/professors/page.tsx # NEW: Manager add professor page
+│   │   └── unauthorized/page.tsx # UPDATED: Redirection logic
 │   ├── components/           # React components
 │   │   ├── StudentDashboard.tsx
 │   │   ├── SoutenanceRequestForm.tsx
-│   │   └── RequestHistory.tsx
+│   │   ├── RequestHistory.tsx
+│   │   ├── unified-sidebar.tsx # UPDATED: Manager navigation links
+│   │   ├── MultiPageDashboard.tsx # UPDATED: Student navigation links
+│   │   └── withAuth.tsx      # UPDATED: Role-based access control logic
 │   ├── services/             # API integration
-│   └── types/                # TypeScript types
+│   │   ├── api.ts            # UPDATED: Exported api instance
+│   │   ├── auth.ts           # UPDATED: Added registerStudent function
+│   │   └── manager.ts        # NEW: Manager-specific API services
+│   └── types/                # TypeScript types (UPDATED: UserRole enum)
 └── docker-compose.yml        # PostgreSQL setup
 ```
 
@@ -150,7 +168,7 @@ Authentication is handled using JWT (JSON Web Tokens).
 2.  **Token Generation**: The backend authenticates the user. If successful, it generates a JWT access token containing the user's ID, email, and role.
 3.  **Token Storage**: The frontend receives the token and stores it in the browser's `localStorage`.
 4.  **Authenticated Requests**: For subsequent requests to protected endpoints, the frontend attaches the JWT to the `Authorization` header as a `Bearer` token.
-5.  **Token Verification**: The backend uses a dependency (`get_current_user`) to verify the token on protected routes. If the token is valid, the user's information is retrieved from the database and made available to the endpoint. Role-based access is controlled by `require_role` dependencies.
+5.  **Token Verification**: The backend uses a dependency (`get_current_user`) to verify the token on protected routes. If the token is valid, the user's information is retrieved from the database and made available to the endpoint. Role-based access is controlled by `require_role` dependencies. Unauthorized users are now redirected to their respective home dashboards.
 
 ### Backend Development Guide: Adding a New Feature
 
@@ -221,7 +239,7 @@ from ..schemas.project import ProjectCreate, ProjectUpdate
 class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     pass
 
-project = CRUDProject(Project)
+project = CRUDProject(Project) # IMPORTANT: The instance name must match the import in __init__.py
 ```
 
 Import the new CRUD object in `backend/app/crud/__init__.py`.
@@ -266,9 +284,9 @@ app.include_router(project.router, prefix="/api/v1/projects", tags=["projects"])
 
 ### Frontend Development Guide
 
-1.  **API Service**: Add a function in `frontend/services/api.ts` to call the new `/api/v1/projects` endpoint.
-2.  **Component**: Create a new React component (e.g., `frontend/components/ProjectForm.tsx`) to interact with the API.
-3.  **Page**: Create a new page in `frontend/app/projects/page.tsx` to display the component.
+1.  **API Service**: Add a function in `frontend/services/api.ts` (or a new dedicated service like `frontend/services/manager.ts` for role-specific actions) to call the new backend endpoints.
+2.  **Component**: Create new React components (e.g., `frontend/components/ProjectForm.tsx`) to interact with the API.
+3.  **Page**: Create new pages in `frontend/app/projects/page.tsx` to display the components. Ensure pages are protected using the `withAuth` HOC with the correct `UserRole`.
 
 ---
 
@@ -276,12 +294,12 @@ app.include_router(project.router, prefix="/api/v1/projects", tags=["projects"])
 
 ### Backend Environment Variables
 
-If you run the backend outside Docker, edit `backend/.env`:
+The `.env` file in the `backend` folder should now contain:
 
 ```env
-DATABASE_URL=postgresql://postgres:admin1234@localhost:5432/Ai_Soutenance
-API_HOST=0.0.0.0
-API_PORT=8000
+DATABASE_URL="postgresql://postgres:admin1234@localhost:5432/Ai_Soutenance"
+GEMINI_API_KEY="AIzaSyA4DzC34gyFWPHIZXudOtDh688K0-blCoQ"
+# ... other existing variables
 ```
 
 When using Docker Compose, `DATABASE_URL` is injected automatically and should use the service name `postgres`.
@@ -300,13 +318,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 The system uses PostgreSQL with the following main tables:
 
-- **users**: User authentication and roles
+- **users**: User authentication and roles (UPDATED: Added `phone` and `is_active` columns).
 - **students**: Student-specific information
 - **professors**: Professor details and availability
 - **thesis_defenses**: Defense requests and schedules
 - **reports**: Uploaded PDF reports with AI analysis
 - **jury_members**: Jury assignments for defenses
 - **notifications**: System notifications
+- **managers**: Manager-specific information (NEW: Added as a separate model)
 
 ---
 
@@ -318,8 +337,8 @@ You can use the following credentials to log in and test the application with di
 
 | Role      | Email                  | Password   |
 |-----------|------------------------|------------|
-| Student   | student@example.com    | `password` |
-| Professor | professor@example.com  | `password` |
+| Student   | student1@example.com   | `password` |
+| Professor | prof1@example.com      | `password` |
 | Manager   | manager@example.com    | `password` |
 | Admin     | admin@example.com      | `password` |
 
@@ -332,10 +351,10 @@ Visit **http://localhost:8000/docs** for interactive API documentation (Swagger 
 ## 🐳 Docker Commands
 
 ```bash
-# Start everything
+# Start everything (builds if necessary, runs in foreground)
 docker compose up --build
 
-# Start in background
+# Start everything in detached mode
 docker compose up -d --build
 
 # Stop everything
@@ -345,8 +364,10 @@ docker compose down
 docker compose logs -f
 
 # Reset database (⚠️ deletes all data)
-docker compose down -v
+docker compose down
+docker volume rm ai_soutenance_postgres_data
 docker compose up -d --build
+docker compose exec backend python seed_data.py
 ```
 
 ## 🧯 Docker Troubleshooting
@@ -382,7 +403,7 @@ docker compose up -d --build
 3) (Optional) Seed test data:
 
 ```bash
-docker compose exec backend python scripts/create_test_data.py
+docker compose exec backend python seed_data.py
 ```
 
 4) Create a feature branch, push, and open a PR into `dev`:
@@ -398,108 +419,45 @@ git push -u origin feature/<your-feature>
 
 ## 📝 API Endpoints
 
-### Student Endpoints
+### Authentication Endpoints
+- `POST /api/v1/auth/register/student` - NEW: Register a new student account (initially inactive).
+- `POST /api/v1/auth/login` - Authenticate user and receive JWT token.
 
+### Student Endpoints
 - `POST /api/students/soutenance-requests` - Submit defense request
 - `GET /api/students/soutenance-requests` - Get student's requests
 - `GET /api/students/dashboard` - Get dashboard statistics
 - `GET /api/students/requests/{id}` - Get specific request
 
 ### Professor Endpoints
-
 - `GET /api/v1/professors` - List all professors
-- `POST /api/v1/professors` - Create professor
+- `GET /api/v1/professors/{professor_id}` - Retrieve a specific professor
+- `GET /api/v1/professors/assigned-soutenances` - Get assigned thesis defenses
+- `GET /api/v1/professors/soutenances/{defense_id}` - Get details of a specific assigned defense
+- `GET /api/v1/professors/soutenances/{defense_id}/report/download` - Download report for an assigned defense
+- `POST /api/v1/professors/soutenances/{defense_id}/evaluation` - Submit evaluation for a defense
+- `GET /api/v1/professors/notifications` - List professor's notifications
+- `PATCH /api/v1/professors/notifications/{notification_id}/read` - Mark notification as read
+
+### Manager Endpoints (NEW)
+- `GET /api/v1/manager/pending-students` - List all pending student registration requests.
+- `PATCH /api/v1/manager/pending-students/{user_id}/approve` - Approve a student registration request.
+- `DELETE /api/v1/manager/pending-students/{user_id}/reject` - Reject and delete a student registration request.
+- `POST /api/v1/manager/professors` - Add a new professor.
 
 ### Thesis Defense Endpoints
+- `GET /api/v1/thesis-defenses/` - List all thesis defenses
+- `PATCH /api/v1/thesis-defenses/{defense_id}` - Update a thesis defense (e.g., status, schedule)
+- `GET /api/v1/thesis-defenses/{defense_id}/jury` - Retrieve jury members for a defense
+- `POST /api/v1/thesis-defenses/{defense_id}/jury` - Assign a professor to a jury
+- `PUT /api/v1/thesis-defenses/{defense_id}/jury/{professor_id}` - Update a jury member's role
+- `GET /api/v1/thesis-defenses/{defense_id}/jury-suggestions` - Get AI-powered jury suggestions
 
-- `GET /api/v1/defenses/` - List all defenses
-- `PATCH /api/v1/defenses/{id}` - Update defense status
-- `GET /api/v1/defenses/{id}/jury` - Get jury members
-- `POST /api/v1/defenses/{id}/jury` - Assign jury member
+### User Endpoints
+- `GET /api/v1/users/me` - Get current authenticated user's profile.
 
----
-
-## 👥 Team Contributions
-
-- **Khalid**: Student Dashboard & Frontend Integration
-- **Abdelmoughit**: Professor Space
-- **Abdelkbir**: Database & Backend Architecture
-- **Achraf**: [Your role]
-
----
-
-## 🔜 Upcoming Features
-
-- [ ] AI-powered PDF analysis integration
-- [ ] Email notifications
-- [ ] Calendar integration
-- [ ] Multi-language support
-- [ ] Advanced search and filtering
-- [ ] Export reports (PDF/Excel)
-
----
-
-## 🐛 Troubleshooting
-
-### Database Connection Error
-
-```bash
-# Ensure PostgreSQL is running
-docker ps
-
-# Restart PostgreSQL
-docker-compose restart
-```
-
-### Backend Module Not Found
-
-```bash
-# Ensure you're in the backend directory
-cd backend
-
-# Reinstall dependencies
-pip install -r requirements.txt
-```
-
-### Frontend Build Errors
-
-```bash
-# Clear cache and reinstall
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Login and Authentication Troubleshooting
-
-If you encounter issues during login, refer to these common problems and their solutions:
-
--   **`401 Unauthorized` errors in backend logs (`INFO: ... 401 Unauthorized`)**:
-    This indicates that the provided username (email) or password is incorrect. Ensure you are using the default credentials created by the `create_initial_data.py` script.
-    *   **Default Credentials (password for all):**
-        *   `student@example.com`
-        *   `professor@example.com`
-        *   `manager@example.com`
-        *   `admin@example.com`
-    *   **Solution:** Verify the backend database has been seeded. Follow step 3 in "Quick Start -> Option A" to run `docker compose run --rm backend python scripts/create_initial_data.py`.
-
--   **`Failed to load resource: net::ERR_NAME_NOT_RESOLVED` or `AxiosError` in browser console**:
-    This means your frontend application cannot reach the backend API.
-    *   **Common Causes:**
-        *   The backend service is not running.
-        *   The frontend's `NEXT_PUBLIC_API_URL` environment variable is misconfigured for client-side access.
-    *   **Solution:**
-        1.  Ensure all Docker services are running: `docker compose ps`. If any service is down, run `docker compose up -d`.
-        2.  Verify the `NEXT_PUBLIC_API_URL` in `docker-compose.yml` for the frontend service is set to `http://localhost:8000`. If you changed it, revert it and rebuild the frontend:
-            ```bash
-            docker compose build frontend
-            docker compose up -d --force-recreate frontend
-            ```
-            Then access the frontend at `http://localhost:3000`.
-
--   **`AttributeError: module 'app.crud' has no attribute 'user'` in backend logs**:
-    This is an internal backend issue related to how database operations for users are exposed.
-    *   **Solution:** This was addressed by ensuring `app/crud/crud_user.py` is correctly imported in `app/crud/__init__.py`. If you encounter this, ensure your codebase is up-to-date with the latest changes.
+### Statistics Endpoints
+- `GET /api/v1/stats/` - Retrieve overall application statistics.
 
 ---
 

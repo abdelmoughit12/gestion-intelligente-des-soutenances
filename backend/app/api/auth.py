@@ -4,13 +4,49 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from ..schemas import token
-from ..crud import crud_user
+from ..schemas.user import StudentRegistration
+from ..crud import crud_user, crud_student
 from ..core import security
 from ..db.session import get_db
 from ..core.config import settings
 from ..models.user import User
 
 router = APIRouter()
+
+
+@router.post("/register/student", status_code=status.HTTP_201_CREATED)
+def register_student(
+    *,
+    db: Session = Depends(get_db),
+    student_in: StudentRegistration
+):
+    """
+    Create a new student registration request.
+    The account will be inactive until approved by a manager.
+    """
+    # Check for existing user with the same email
+    if crud_user.get_user_by_email(db, email=student_in.email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        )
+    # Check for existing user with the same CNI
+    if crud_student.get_user_by_cni(db, cni=student_in.cni):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this CNI already exists.",
+        )
+    # Check for existing student with the same CNE
+    if crud_student.get_student_by_cne(db, cne=student_in.cne):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A student with this CNE already exists.",
+        )
+
+    user = crud_student.create_student_registration(db, student_in=student_in)
+    
+    return {"message": "Registration successful. Your account is pending approval."}
+
 
 @router.post(
     "/login",
