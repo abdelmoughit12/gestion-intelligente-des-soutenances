@@ -91,6 +91,16 @@ const getRoleNavigation = (role: UserRole) => {
                     icon: ListIcon,
                 },
                 {
+                    title: "Students",
+                    url: "/dashboard/students",
+                    icon: UsersIcon,
+                },
+                {
+                    title: "Professors",
+                    url: "/dashboard/professors",
+                    icon: UserPlusIcon,
+                },
+                {
                     title: "Accept Students",
                     url: "/dashboard/manager/requests",
                     icon: UsersIcon,

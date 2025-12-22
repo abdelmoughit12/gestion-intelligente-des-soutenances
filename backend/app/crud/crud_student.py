@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import List
 from ..models.user import User, UserRole
 from ..models.student import Student
 from ..schemas.user import StudentRegistration
@@ -15,6 +16,12 @@ def get_student_by_cne(db: Session, cne: str) -> Student | None:
     Fetch a student by their CNE.
     """
     return db.query(Student).filter(Student.cne == cne).first()
+
+def get_multi(db: Session, *, skip: int = 0, limit: int = 100) -> List[Student]:
+    """
+    Retrieve multiple students with pagination.
+    """
+    return db.query(Student).offset(skip).limit(limit).all()
 
 def create_student_registration(db: Session, student_in: StudentRegistration) -> User:
     """

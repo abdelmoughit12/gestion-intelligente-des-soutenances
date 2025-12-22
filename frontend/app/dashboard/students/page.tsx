@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { StudentsDataTable, studentSchema } from '@/components/students-data-table';
 import { z } from 'zod';
+import { api } from '@/services/api';
 
 type Student = z.infer<typeof studentSchema>;
 
@@ -14,15 +15,11 @@ const StudentsPage = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/students/');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const validatedData = z.array(studentSchema).parse(data);
+        const response = await api.get('/api/v1/manager/students');
+        const validatedData = z.array(studentSchema).parse(response.data);
         setStudents(validatedData);
       } catch (e: any) {
-        setError(e.message);
+        setError(e.response?.data?.detail || e.message);
         console.error("Failed to fetch students:", e);
       } finally {
         setLoading(false);

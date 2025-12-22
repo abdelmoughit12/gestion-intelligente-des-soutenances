@@ -12,6 +12,33 @@ router = APIRouter()
 
 # ... (existing pending student routes) ...
 
+@router.get("/professors", response_model=List[schemas.Professor], dependencies=[Depends(require_manager)])
+def get_all_professors(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    """
+    Retrieve all professors.
+    Accessible only by managers.
+    """
+    professors = crud.professor.get_multi(db, skip=skip, limit=limit)
+    return professors
+
+@router.get("/students", response_model=List[schemas.Student], dependencies=[Depends(require_manager)])
+def get_all_students(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    """
+    Retrieve all students.
+    Accessible only by managers.
+    """
+    from ..crud import crud_student
+    students = crud_student.get_multi(db, skip=skip, limit=limit)
+    return students
+
 @router.post("/professors", response_model=schemas.user.User, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_manager)])
 def add_professor(
     *,

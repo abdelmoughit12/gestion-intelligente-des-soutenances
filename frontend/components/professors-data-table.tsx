@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 
-export const studentUserSchema = z.object({
+export const professorUserSchema = z.object({
   email: z.string().email(),
   first_name: z.string(),
   last_name: z.string(),
@@ -29,16 +29,14 @@ export const studentUserSchema = z.object({
   role: z.string(),
 });
 
-export const studentSchema = z.object({
-  major: z.string().nullable(),
-  cne: z.string().nullable(),
-  year: z.number().nullable(),
-  user: studentUserSchema,
+export const professorSchema = z.object({
+  specialty: z.string().nullable(),
+  user: professorUserSchema,
 });
 
-  type Student = z.infer<typeof studentSchema>;
+type Professor = z.infer<typeof professorSchema>;
 
-export const columns: ColumnDef<Student>[] = [
+export const columns: ColumnDef<Professor>[] = [
     {
         accessorKey: "fullName",
         header: "Full Name",
@@ -49,27 +47,17 @@ export const columns: ColumnDef<Student>[] = [
         header: "Email",
     },
     {
-        accessorKey: "cne",
-        header: "CNE",
-        cell: ({ row }) => row.original.cne || "N/A",
-    },
-    {
-        accessorKey: "major",
-        header: "Major",
-        cell: ({ row }) => row.original.major || "N/A",
-    },
-    {
-        accessorKey: "year",
-        header: "Year",
-        cell: ({ row }) => row.original.year?.toString() || "N/A",
+        accessorKey: "specialty",
+        header: "Specialty",
+        cell: ({ row }) => row.original.specialty || "N/A",
     },
 ];
 
-interface StudentsDataTableProps {
-  data: Student[];
+interface ProfessorsDataTableProps {
+  data: Professor[];
 }
 
-export function StudentsDataTable({ data }: StudentsDataTableProps) {
+export function ProfessorsDataTable({ data }: ProfessorsDataTableProps) {
   const table = useReactTable({
     data,
     columns,
